@@ -21,7 +21,7 @@ struct Args {
     #[arg(long, default_value_t = 0x2000)]
     data_start_addr: u16,
     #[arg(long, default_value_t = String::from("bin"))]
-    compile_mode: StrIng,
+    compile_mode: String,
 }
 
 fn main() {

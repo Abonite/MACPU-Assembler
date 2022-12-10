@@ -79,6 +79,7 @@ impl Assembler {
                         define_table.insert(line[1].trim(), line[2].trim());
                     }
                 } else if line[0] == ".STRING" {
+                    // BUG: Can't find string no named
                     if line[1].chars().collect::<Vec<_>>()[0].is_ascii_digit() {
                         panic!("[Syntex Error] line{}:", line_num);
                     } else {
