@@ -80,6 +80,7 @@ impl Assembler {
                     }
                 } else if line[0] == ".STRING" {
                     // BUG: Can't find string no named
+                    // Unnamed string need be check
                     if line[1].chars().collect::<Vec<_>>()[0].is_ascii_digit() {
                         panic!("[Syntex Error] line{}:", line_num);
                     } else {
