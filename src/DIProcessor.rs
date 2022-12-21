@@ -1,6 +1,12 @@
 use std::collections::HashMap;
 use std::num::ParseIntError;
 
+macro_rules! log {
+    ($log_level: expr, $line_num: expr, $message: expr) => {
+        {println!("[{}] Line {}: {}", $log_level, $line_num, $message);}
+    };
+}
+
 const IDLE: u16                 = 0b0;
 const GET_ARG_1_FIRST_CHAR: u16 = 0b1;
 const GET_ARG_1: u16            = 0b10;
@@ -130,24 +136,23 @@ impl DotInstrctionsProcessor {
                     Err(pe) => {
                         match pe {
                             ParseError::ArgumentStartWithNonUnderlineError(e) => {
-
+                                log!("ERROR", line_num, e);
                             },
                             ParseError::ArgumentStartWithNumberError(e) => {
-
+                                log!("ERROR", line_num, e);
                             },
                             ParseError::ParseNumberError(e) => {
-
+                                log!("ERROR", line_num, e);
                             },
                             ParseError::StateMachineError(e) => {
-
+                                log!("FATAL", line_num, e);
                             },
                             ParseError::TooManyArgmumentError(e) => {
-
+                                log!("ERROR", line_num, e);
                             }
                         }
                     }
                 }
-
             } else if line.starts_with(".DATA") {
 
             } else if line.starts_with(".ARRAY") {
