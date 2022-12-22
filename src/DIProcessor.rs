@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::hash::Hash;
 use std::num::ParseIntError;
 
 macro_rules! log {
@@ -95,13 +96,18 @@ impl std::error::Error for PNError {}
 
 pub struct DotInstrctionsProcessor {
     dot_instrctions: Vec<(usize, String)>,
-    set_info: HashMap<String, setting_items>
+    set_info: HashMap<String, setting_items>,
+    data_buffer: Vec<u16>,
+    data_info: HashMap<String, u16>,
+    define_info: HashMap<String, String>
 }
 
-enum setting_items {
+#[derive(Clone)]
+pub enum setting_items {
     sibool(bool),
-    sinum(usize),
-    sistr(String)
+    sinum(u16),
+    sistr(String),
+    siarr(Vec<u16>)
 }
 
 impl DotInstrctionsProcessor {
@@ -120,7 +126,10 @@ impl DotInstrctionsProcessor {
         }
         (DotInstrctionsProcessor {
             dot_instrctions,
-            set_info: HashMap::new()
+            set_info: HashMap::new(),
+            data_buffer: vec![],
+            data_info: HashMap::new(),
+            define_info: HashMap::new()
         }, instrcutions)
     }
 
@@ -130,7 +139,15 @@ impl DotInstrctionsProcessor {
                 match self.two_args(line.trim_start_matches(".SET")) {
                     Ok((si, sv)) => {
                         if self.set_info.contains_key(&si) {
+                            match sv.clone() {
+                                setting_items::siarr(a) => log!("ERROR", line_num, "\".SET\" type cannot be array"),
+                                setting_items::sibool(_) => (),
+                                setting_items::sinum(_) => (),
+                                setting_items::sistr(_) => ()
+                            }
                             self.set_info.insert(si, sv);
+                        } else {
+                            log!("ERROR", line_num, "Unkonwn set arg");
                         }
                     },
                     Err(pe) => {
@@ -154,17 +171,137 @@ impl DotInstrctionsProcessor {
                     }
                 }
             } else if line.starts_with(".DATA") {
-
+                match self.two_args(line.trim_start_matches(".DATA")) {
+                    Ok((di, dv)) => {
+                        let pointer = self.data_buffer.len();
+                        if pointer > u16::MAX as usize {
+                            log!("FATAL", line_num, "Too many data has exceeded the addressing range");
+                        } else {
+                            self.data_info.insert(di, self.data_buffer.len() as u16);
+                        }
+                        match dv {
+                            setting_items::sibool(b) => {
+                                self.data_buffer.push(if b {1_u16} else {0_u16})
+                            },
+                            setting_items::sinum(n) => {
+                                self.data_buffer.push(n)
+                            },
+                            setting_items::sistr(s) => {
+                                log!("ERROR", line_num, "\".DATA\" type cannot be a string")
+                            },
+                            setting_items::siarr(a) => {
+                                log!("ERROR", line_num, "\".DATA\" type cannot be a array")
+                            }
+                        }
+                    },
+                    Err(pe) => {
+                        match pe {
+                            ParseError::ArgumentStartWithNonUnderlineError(e) => {
+                                log!("ERROR", line_num, e);
+                            },
+                            ParseError::ArgumentStartWithNumberError(e) => {
+                                log!("ERROR", line_num, e);
+                            },
+                            ParseError::ParseNumberError(e) => {
+                                log!("ERROR", line_num, e);
+                            },
+                            ParseError::StateMachineError(e) => {
+                                log!("FATAL", line_num, e);
+                            },
+                            ParseError::TooManyArgmumentError(e) => {
+                                log!("ERROR", line_num, e);
+                            }
+                        }
+                    }
+                }
             } else if line.starts_with(".ARRAY") {
-
+                match self.two_args(line.trim_start_matches(".ARRAY")) {
+                    Ok((ai, av)) => {
+                        let pointer = self.data_buffer.len();
+                        if pointer > u16::MAX as usize {
+                            log!("FATAL", line_num, "Too many data has exceeded the addressing range");
+                        } else {
+                            self.data_info.insert(ai, self.data_buffer.len() as u16);
+                        }
+                        match av {
+                            setting_items::sibool(_) => {
+                                log!("ERROR", line_num, "\".ARRAY\" type cannot be a bool value")
+                            },
+                            setting_items::sinum(n) => {
+                                self.data_buffer.push(n);
+                            },
+                            setting_items::sistr(s) => {
+                                for c in s.chars() {
+                                    self.data_buffer.push(c as u16);
+                                }
+                                self.data_buffer.push('\0' as u16);
+                            },
+                            setting_items::siarr(a) => {
+                                for n in a {
+                                    self.data_buffer.push(n);
+                                }
+                            }
+                        }
+                    },
+                    Err(pe) => {
+                        match pe {
+                            ParseError::ArgumentStartWithNonUnderlineError(e) => {
+                                log!("ERROR", line_num, e);
+                            },
+                            ParseError::ArgumentStartWithNumberError(e) => {
+                                log!("ERROR", line_num, e);
+                            },
+                            ParseError::ParseNumberError(e) => {
+                                log!("ERROR", line_num, e);
+                            },
+                            ParseError::StateMachineError(e) => {
+                                log!("FATAL", line_num, e);
+                            },
+                            ParseError::TooManyArgmumentError(e) => {
+                                log!("ERROR", line_num, e);
+                            }
+                        }
+                    }
+                }
             } else if line.starts_with(".DEFINE") {
-
+                match self.two_args(line.trim_start_matches(".DEFINE")) {
+                    Ok((di, dv)) => {
+                        match dv {
+                            setting_items::siarr(_) => log!("ERROR", line_num, "\".DEFINE\" type cannot be array"),
+                            setting_items::sibool(_) => log!("ERROR", line_num, "\".DEFINE\" type cannot be bool"),
+                            setting_items::sinum(_) => log!("ERROR", line_num, "\".DEFINE\" type cannot be number"),
+                            setting_items::sistr(s) => {self.define_info.insert(di, s);}
+                        }
+                    },
+                    Err(pe) => {
+                        match pe {
+                            ParseError::ArgumentStartWithNonUnderlineError(e) => {
+                                log!("ERROR", line_num, e);
+                            },
+                            ParseError::ArgumentStartWithNumberError(e) => {
+                                log!("ERROR", line_num, e);
+                            },
+                            ParseError::ParseNumberError(e) => {
+                                log!("ERROR", line_num, e);
+                            },
+                            ParseError::StateMachineError(e) => {
+                                log!("FATAL", line_num, e);
+                            },
+                            ParseError::TooManyArgmumentError(e) => {
+                                log!("ERROR", line_num, e);
+                            }
+                        }
+                    }
+                }
             } else {
-                // Error
+                log!("ERROR", line_num, "Unknown Instruction");
             }
         }
     }
 
+    pub fn getinfo(&self) -> (HashMap<String, setting_items>, HashMap<String, u16>, HashMap<String, String>, Vec<u16>) {
+        (self.set_info.clone(), self.data_info.clone(), self.define_info.clone(), self.data_buffer.clone())
+    }
     /// Instructions that need to remove the beginning of a line
     fn one_arg(&self, line: &str) -> Result<String, ParseError> {
         let mut curr_state = IDLE;
@@ -286,26 +423,21 @@ impl DotInstrctionsProcessor {
         }
 
         if arg_2_type == arg_not_str {
-            if arg_2.ends_with("H") {
-                match usize::from_str_radix(arg_2.trim_end_matches("H"), 16) {
-                    Ok(a) => return Ok((arg_1, setting_items::sinum(a))),
-                    Err(e) => return Err(ParseError::ParseNumberError(e))
-                };
-            } else if arg_2.ends_with("O") {
-                match usize::from_str_radix(arg_2.trim_end_matches("O"), 8) {
-                    Ok(a) => return Ok((arg_1, setting_items::sinum(a))),
-                    Err(e) => return Err(ParseError::ParseNumberError(e))
-                };
-            } else if arg_2.ends_with("B") {
-                match usize::from_str_radix(arg_2.trim_end_matches("B"), 2) {
-                    Ok(a) => return Ok((arg_1, setting_items::sinum(a))),
-                    Err(e) => return Err(ParseError::ParseNumberError(e))
-                };
+            if arg_2.contains(",") {
+                let data_arr_buffer = arg_2.split(",").collect::<Vec<_>>();
+                let mut data_arr = vec![];
+                for data in data_arr_buffer {
+                    match self.str2num(data) {
+                        Ok(a) => data_arr.push(a),
+                        Err(e) => return Err(ParseError::ParseNumberError(e))
+                    }
+                }
+                return Ok((arg_1, setting_items::siarr(data_arr)));
             } else {
-                match usize::from_str_radix(arg_2.as_str(), 10) {
-                    Ok(a) => return Ok((arg_1, setting_items::sinum(a))),
+                match self.str2num(arg_2.as_str()) {
+                    Ok(n) => return Ok((arg_1, setting_items::sinum(n))),
                     Err(e) => return Err(ParseError::ParseNumberError(e))
-                };
+                }
             }
         } else if arg_2_type == arg_str {
             if arg_2.to_ascii_uppercase() == "TRUE" {
@@ -319,12 +451,28 @@ impl DotInstrctionsProcessor {
             return Err(ParseError::StateMachineError(SMError));
         }
     }
-}
 
-struct AST {
-    
-}
-
-fn set_parser(line: String) {
-
+    fn str2num(&self, org_str: &str) -> Result<u16, ParseIntError> {
+        if org_str.ends_with("H") {
+            match u16::from_str_radix(org_str.trim_end_matches("H"), 16) {
+                Ok(a) => return Ok(a),
+                Err(e) => return Err(e)
+            };
+        } else if org_str.ends_with("O") {
+            match u16::from_str_radix(org_str.trim_end_matches("O"), 8) {
+                Ok(a) => return Ok(a),
+                Err(e) => return Err(e)
+            };
+        } else if org_str.ends_with("B") {
+            match u16::from_str_radix(org_str.trim_end_matches("B"), 2) {
+                Ok(a) => return Ok(a),
+                Err(e) => return Err(e)
+            };
+        } else {
+            match u16::from_str_radix(org_str, 10) {
+                Ok(a) => return Ok(a),
+                Err(e) => return Err(e)
+            };
+        }
+    }
 }
