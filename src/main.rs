@@ -42,6 +42,9 @@ fn main() {
     d.generate();
     let (a, b, c, d) = d.getinfo();
 
+    let mut a = InstructionProcessor::new(data);
+    a.syntax_check();
+
     let mut MCAS = Assembler::new(&args.toml_file.as_str());
     MCAS.set(Some(args.code_start_addr), Some(args.data_start_addr), Some(args.stack_start_addr), args.compile_mode);
     MCAS.generate_bcode(args.input_file.as_str(), &args.output_file.as_str());

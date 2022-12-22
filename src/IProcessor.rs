@@ -32,7 +32,7 @@ impl InstructionProcessor {
         }
     }
 
-    pub fn syntex_check(&mut self) {
+    pub fn syntax_check(&mut self) {
         for (line_num, line) in self.file_in_line.clone() {
             
         }
