@@ -126,7 +126,12 @@ impl DotInstrctionsProcessor {
         }
         (DotInstrctionsProcessor {
             dot_instrctions,
-            set_info: HashMap::new(),
+            set_info: HashMap::from([
+                // default settings
+                (String::from("CODE_START_ADDRESS"), setting_items::sinum(0x0)),
+                (String::from("DATA_START_ADDRESS"), setting_items::sinum(0x1000)),
+                (String::from("STACK_START_ADDRESS"), setting_items::sinum(0x2000)),
+            ]),
             data_buffer: vec![],
             data_info: HashMap::new(),
             define_info: HashMap::new()
@@ -134,6 +139,7 @@ impl DotInstrctionsProcessor {
     }
 
     pub fn generate(&mut self) {
+        // error?
         for (line_num, line) in self.dot_instrctions.clone() {
             if line.starts_with(".SET") {
                 match self.two_args(line.trim_start_matches(".SET")) {

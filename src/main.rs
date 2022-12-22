@@ -5,10 +5,12 @@ mod MCAssembler;
 mod SFSpliter;
 mod Instructions;
 mod DIProcessor;
+mod IProcessor;
 
 use DIProcessor::DotInstrctionsProcessor;
 use Instructions::get_instructions;
 use SFSpliter::SourceFileSpliter;
+use IProcessor::InstructionProcessor;
 use MCAssembler::Assembler;
 use clap::{Parser, command};
 
