@@ -5,6 +5,9 @@ macro_rules! log {
     ($log_level: expr, $line_num: expr, $message: expr) => {
         {println!("[{}] Line {}: {}", $log_level, $line_num + 1, $message);}
     };
+    ($log_level: expr, $message: expr) => (
+        {println!("[{}] : {}", $log_level, $message);}
+    )
 }
 
 const IDLE: u8                  = 0;
@@ -386,6 +389,81 @@ impl DotInstrctionsProcessor {
         no_errors
     }
 
+    pub fn data_overflow_ckeck (&self) -> bool {
+        let mut no_errors = true;
+        let code = match self.set_info.get("CODE_START_ADDRESS") {
+            Some(a) => {
+                match a {
+                    setting_items::sinum(n) => n,
+                    _ => {
+                        log!("ERROR", "\"CODE_START_ADDRESS\" setting item is not a number");
+                        no_errors = false;
+                        &0_u16
+                    }
+                }
+            },
+            None => {
+                log!("FATAL", "Can't get \"CODE_START_ADDRESS\" setting item");
+                no_errors = false;
+                &0_u16
+            }
+        };
+
+        let data = match self.set_info.get("DATA_START_ADDRESS") {
+            Some(a) => {
+                match a {
+                    setting_items::sinum(n) => n,
+                    _ => {
+                        log!("ERROR", "\"DATA_START_ADDRESS\" setting item is not a number");
+                        no_errors = false;
+                        &0_u16
+                    }
+                }
+            },
+            None => {
+                log!("FATAL", "Can't get \"DATA_START_ADDRESS\" setting item");
+                no_errors = false;
+                &0_u16
+            }
+        };
+
+        let stack = match self.set_info.get("STACK_START_ADDRESS") {
+            Some(a) => {
+                match a {
+                    setting_items::sinum(n) => n,
+                    _ => {
+                        log!("ERROR", "\"STACK_START_ADDRESS\" setting item is not a number");
+                        no_errors = false;
+                        &0_u16
+                    }
+                }
+            },
+            None => {
+                log!("FATAL", "Can't get \"STACK_START_ADDRESS\" setting item");
+                no_errors = false;
+                &0_u16
+            }
+        };
+
+        if no_errors {
+            if stack > data {
+                if data < code {
+                    log!("ERROR", "Data segment start address must greater then code segment start address");
+                    no_errors = false;
+                } else {
+                    let data_segment_start_address = stack - data + 1;
+                    if data_segment_start_address <= self.data_buffer.len() as u16 {
+                        log!("ERROR", "The data number in data segment is greater than the preset length");
+                        no_errors = false;
+                    }
+                }
+            } else {
+                log!("ERROR", "Stack segment start address must greater then data segment start address");
+                no_errors = false;
+            }
+        }
+        no_errors
+    }
     pub fn getinfo(&self) -> (HashMap<String, setting_items>, HashMap<String, u16>, HashMap<String, String>, Vec<u16>) {
         (self.set_info.clone(), self.data_info.clone(), self.define_info.clone(), self.data_buffer.clone())
     }

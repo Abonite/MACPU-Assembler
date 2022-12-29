@@ -43,6 +43,9 @@ fn main() {
     if !dip.syntax_check() {
         panic!("[ERROR] Due to early errors, complier is stoped");
     }
+    if !dip.data_overflow_ckeck() {
+        panic!("[ERROR] Due to early errors, complier is stoped");
+    }
 
     let (a, b, c, d) = dip.getinfo();
     println!("[DEBUG]: set info - {:?}", a);
