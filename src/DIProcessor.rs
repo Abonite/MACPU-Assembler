@@ -3,79 +3,26 @@ use std::num::ParseIntError;
 
 macro_rules! log {
     ($log_level: expr, $line_num: expr, $message: expr) => {
-        {println!("[{}] Line {}: {}", $log_level, $line_num, $message);}
+        {println!("[{}] Line {}: {}", $log_level, $line_num + 1, $message);}
     };
 }
 
-const IDLE: u16                 = 0b0;
-const GET_ARG_1_FIRST_CHAR: u16 = 0b1;
-const GET_ARG_1: u16            = 0b10;
-const ARG_1_FINISH: u16         = 0b100;
-const GET_ARG_2: u16            = 0b1000;
-const FINISH: u16               = 0b10000;
-
-enum ParseError {
-    ArgumentStartWithNumberError(ASWNError),
-    ArgumentStartWithNonUnderlineError(ASWNUError),
-    TooManyArgmumentError(TMAError),
-    StateMachineError(SMError),
-    ParseNumberError(ParseIntError)
-}
+const IDLE: u8                  = 0;
+const INST: u8                  = 10;
+const GET_ARG_1_FIRST_CHAR: u8  = 20;
+const GET_ARG_1: u8             = 30;
+const GET_ARG_2_FIRST_CHAR: u8  = 40;
+const GET_ARG_2: u8             = 50;
+const GET_ARG_2_STRING: u8      = 60;
+const FINISH: u8                = 70;
 
 #[derive(Debug)]
-struct ASWNError;
-
-impl std::fmt::Display for ASWNError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "First argument can not start with number")
-    }
+#[derive(Clone)]
+struct AST {
+    inst: String,
+    arg_1: String,
+    arg_2: setting_items
 }
-
-impl std::error::Error for ASWNError {}
-
-#[derive(Debug)]
-struct ASWNUError;
-
-impl std::fmt::Display for ASWNUError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Argument can not start with a symbol other than '_'")
-    }
-}
-
-impl std::error::Error for ASWNUError {}
-
-#[derive(Debug)]
-struct TMAError;
-
-impl std::fmt::Display for TMAError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Only need one argmument")
-    }
-}
-
-impl std::error::Error for TMAError {}
-
-#[derive(Debug)]
-struct SMError;
-
-impl std::fmt::Display for SMError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "State machine error")
-    }
-}
-
-impl std::error::Error for SMError {}
-
-#[derive(Debug)]
-struct PNError;
-
-impl std::fmt::Display for PNError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Illegal character while parsing number")
-    }
-}
-
-impl std::error::Error for PNError {}
 
 /// The Dot Instrction e.g. ProProcess Instrction in this assemblyer must abide by this syntax format:
 /// .INSTNAME[SPACE]VARIABLENAME[SPACE]VALUE[SPACE or TAB][\n]
@@ -98,15 +45,18 @@ pub struct DotInstrctionsProcessor {
     set_info: HashMap<String, setting_items>,
     data_buffer: Vec<u16>,
     data_info: HashMap<String, u16>,
-    define_info: HashMap<String, String>
+    define_info: HashMap<String, String>,
+    ast_buffer: Vec<(usize, AST)>
 }
 
 #[derive(Clone)]
+#[derive(Debug)]
 pub enum setting_items {
     sibool(bool),
     sinum(u16),
     sistr(String),
-    siarr(Vec<u16>)
+    siarr(Vec<u16>),
+    sinull()
 }
 
 impl DotInstrctionsProcessor {
@@ -133,329 +83,313 @@ impl DotInstrctionsProcessor {
             ]),
             data_buffer: vec![],
             data_info: HashMap::new(),
-            define_info: HashMap::new()
+            define_info: HashMap::new(),
+            ast_buffer: vec![]
         }, instrcutions)
     }
 
-    pub fn generate(&mut self) {
-        // error?
+    pub fn lexical_check(&mut self) -> bool {
+        let mut no_errors = true;
+
         for (line_num, line) in self.dot_instrctions.clone() {
-            if line.starts_with(".SET") {
-                match self.two_args(line.trim_start_matches(".SET")) {
-                    Ok((si, sv)) => {
-                        if self.set_info.contains_key(&si) {
-                            match sv.clone() {
-                                setting_items::siarr(a) => log!("ERROR", line_num, "\".SET\" type cannot be array"),
-                                setting_items::sibool(_) => (),
-                                setting_items::sinum(_) => (),
-                                setting_items::sistr(_) => ()
-                            }
-                            self.set_info.insert(si, sv);
-                        } else {
-                            log!("ERROR", line_num, "Unkonwn set arg");
+            let mut curr_state = IDLE;
+
+            let mut inst = String::new();
+            let mut arg_1 = String::new();
+            let mut arg_2 = String::new();
+
+            let mut arg_2_is_string = false;
+
+            for c in line.chars() {
+                match curr_state {
+                    IDLE => {
+                        if c == '.' {
+                            curr_state = INST;
                         }
                     },
-                    Err(pe) => {
-                        match pe {
-                            ParseError::ArgumentStartWithNonUnderlineError(e) => {
-                                log!("ERROR", line_num, e);
-                            },
-                            ParseError::ArgumentStartWithNumberError(e) => {
-                                log!("ERROR", line_num, e);
-                            },
-                            ParseError::ParseNumberError(e) => {
-                                log!("ERROR", line_num, e);
-                            },
-                            ParseError::StateMachineError(e) => {
-                                log!("FATAL", line_num, e);
-                            },
-                            ParseError::TooManyArgmumentError(e) => {
-                                log!("ERROR", line_num, e);
-                            }
-                        }
-                    }
-                }
-            } else if line.starts_with(".DATA") {
-                match self.two_args(line.trim_start_matches(".DATA")) {
-                    Ok((di, dv)) => {
-                        let pointer = self.data_buffer.len();
-                        if pointer > u16::MAX as usize {
-                            log!("FATAL", line_num, "Too many data has exceeded the addressing range");
+                    INST => {
+                        if (c == ' ' || c == '\t') && c != '\n' {
+                            curr_state = GET_ARG_1_FIRST_CHAR;
+                        } else if c == '\n' {
+                            break;
                         } else {
-                            self.data_info.insert(di, self.data_buffer.len() as u16);
+                            inst.push(c);
                         }
-                        match dv {
-                            setting_items::sibool(b) => {
-                                self.data_buffer.push(if b {1_u16} else {0_u16})
-                            },
-                            setting_items::sinum(n) => {
-                                self.data_buffer.push(n)
-                            },
-                            setting_items::sistr(s) => {
-                                log!("ERROR", line_num, "\".DATA\" type cannot be a string")
-                            },
-                            setting_items::siarr(a) => {
-                                log!("ERROR", line_num, "\".DATA\" type cannot be a array")
+                    },
+                    GET_ARG_1_FIRST_CHAR => {
+                        if c != ' ' && c != '\t' {
+                            if c.is_ascii_digit() || (c.is_ascii_punctuation() && c != '_') {
+                                log!("ERROR", line_num, "The argument can not start with number or punctuation but \"_\"");
+                                no_errors = false;
+                            } else {
+                                arg_1.push(c);
+                                curr_state = GET_ARG_1;
                             }
                         }
                     },
-                    Err(pe) => {
-                        match pe {
-                            ParseError::ArgumentStartWithNonUnderlineError(e) => {
-                                log!("ERROR", line_num, e);
-                            },
-                            ParseError::ArgumentStartWithNumberError(e) => {
-                                log!("ERROR", line_num, e);
-                            },
-                            ParseError::ParseNumberError(e) => {
-                                log!("ERROR", line_num, e);
-                            },
-                            ParseError::StateMachineError(e) => {
-                                log!("FATAL", line_num, e);
-                            },
-                            ParseError::TooManyArgmumentError(e) => {
-                                log!("ERROR", line_num, e);
-                            }
+                    GET_ARG_1 => {
+                        if (c == ' ' || c == '\t') && c != '\n' {
+                            curr_state = GET_ARG_2_FIRST_CHAR;
+                        } else if c == '\n' {
+                            break;
+                        } else {
+                            arg_1.push(c);
                         }
+                    },
+                    GET_ARG_2_FIRST_CHAR => {
+                        if (c == ' ' || c == '\t' ) && c != '\n' {
+                            continue;
+                        } else if c == '\n' {
+                            break;
+                        } else if (c != ' ' && c != '\t' && c != '\n') {
+                            if c == '\"' {
+                                curr_state = GET_ARG_2_STRING;
+                            } else {
+                                curr_state = GET_ARG_2;
+                                arg_2.push(c);
+                            }
+                        } else {
+                            log!("FATAL", line_num, "State machine error");
+                            no_errors = false;
+                        }
+                    },
+                    GET_ARG_2_STRING => {
+                        arg_2_is_string = true;
+                        if c == '\"' {
+                            curr_state = FINISH;
+                        } else if c == '\n' {
+                            log!("ERROR", line_num, "Argument finished with out \"");
+                            no_errors = false;
+                        } else {
+                            arg_2.push(c);
+                        }
+                    },
+                    GET_ARG_2 => {
+                        if c != '\n' {
+                            arg_2.push(c);
+                        } else {
+                            break;
+                        }
+                    },
+                    FINISH => {
+                        if (c != '\n' && c != ' ' && c != '\t') {
+                            log!("ERROR", line_num, "Too many arguments");
+                            no_errors = false;
+                        } else if c == '\n' {
+                            break;
+                        } else {
+                            continue;
+                        }
+                    },
+                    _ => {
+                        log!("FATAL", line_num, "State machine Error");
+                        no_errors = false;
                     }
                 }
-            } else if line.starts_with(".ARRAY") {
-                match self.two_args(line.trim_start_matches(".ARRAY")) {
-                    Ok((ai, av)) => {
-                        let pointer = self.data_buffer.len();
-                        if pointer > u16::MAX as usize {
-                            log!("FATAL", line_num, "Too many data has exceeded the addressing range");
-                        } else {
-                            self.data_info.insert(ai, self.data_buffer.len() as u16);
-                        }
-                        match av {
-                            setting_items::sibool(_) => {
-                                log!("ERROR", line_num, "\".ARRAY\" type cannot be a bool value")
-                            },
-                            setting_items::sinum(n) => {
-                                self.data_buffer.push(n);
-                            },
-                            setting_items::sistr(s) => {
-                                for c in s.chars() {
-                                    self.data_buffer.push(c as u16);
+            }
+
+            let inst = inst.trim();
+            let arg_1 = arg_1.trim();
+            let arg_2 = arg_2.trim();
+
+            log!("DEBUG", line_num, format!("inst: {}, arg_1: {}, arg_2: {}", inst, arg_1, arg_2));
+
+            if inst.is_empty() {
+                log!("ERROR", line_num, "No dot instruction in this line");
+                no_errors = false;
+            } else {
+                if no_errors {
+                    let mut ast = AST {
+                        inst: String::new(),
+                        arg_1: String::new(),
+                        arg_2: setting_items::sinull()
+                    };
+
+                    if arg_2_is_string {
+                        ast = AST {
+                            inst: String::from(inst),
+                            arg_1: String::from(arg_1),
+                            arg_2: setting_items::sistr(String::from(arg_2))
+                        };
+
+                    } else {
+                        if arg_2.is_empty() {
+
+                        } else if arg_2.contains(',') {
+                            let mut array = vec![];
+                            for item in arg_2.split(',').map(|x| x.trim()) {
+                                match self.str2num(item) {
+                                    Ok(i) => array.push(i),
+                                    Err(e) => {
+                                        log!("ERROR", line_num, e);
+                                        no_errors = false;
+                                    }
                                 }
-                                self.data_buffer.push('\0' as u16);
-                            },
-                            setting_items::siarr(a) => {
-                                for n in a {
-                                    self.data_buffer.push(n);
+                            }
+                            ast = AST {
+                                inst: String::from(inst),
+                                arg_1: String::from(arg_1),
+                                arg_2: setting_items::siarr(array)
+                            };
+                        } else {
+                            match self.str2num(arg_2) {
+                                Ok(a) => {
+                                    ast = AST {
+                                        inst: String::from(inst),
+                                        arg_1: String::from(arg_1),
+                                        arg_2: setting_items::sinum(a)
+                                    };
+                                },
+                                Err(e) => {
+                                    if arg_2.to_uppercase() == "TRUE" {
+                                        ast = AST {
+                                            inst: String::from(inst),
+                                            arg_1: String::from(arg_1),
+                                            arg_2: setting_items::sibool(true)
+                                        };
+                                    } else if arg_2.to_uppercase() == "FALSE" {
+                                        ast = AST {
+                                            inst: String::from(inst),
+                                            arg_1: String::from(arg_1),
+                                            arg_2: setting_items::sibool(false)
+                                        };
+                                    } else {
+                                        log!("ERROR", line_num, e);
+                                        no_errors = false;
+                                    }
                                 }
                             }
                         }
-                    },
-                    Err(pe) => {
-                        match pe {
-                            ParseError::ArgumentStartWithNonUnderlineError(e) => {
-                                log!("ERROR", line_num, e);
-                            },
-                            ParseError::ArgumentStartWithNumberError(e) => {
-                                log!("ERROR", line_num, e);
-                            },
-                            ParseError::ParseNumberError(e) => {
-                                log!("ERROR", line_num, e);
-                            },
-                            ParseError::StateMachineError(e) => {
-                                log!("FATAL", line_num, e);
-                            },
-                            ParseError::TooManyArgmumentError(e) => {
-                                log!("ERROR", line_num, e);
+                    }
+                    self.ast_buffer.push((line_num, ast));
+                } else {
+                    continue;
+                }
+            }
+        }
+        log!("DEBUG", 0xdeb, format!("{:?}", self.ast_buffer));
+        no_errors
+    }
+
+    pub fn syntax_check(&mut self) -> bool {
+        let mut no_errors = true;
+        for (line_num, ast) in self.ast_buffer.clone() {
+            let mut data_pointer = self.data_buffer.len() as u16;
+            if self.data_buffer.len() <= u16::MAX as usize {
+                data_pointer = self.data_buffer.len() as u16;
+            } else {
+                log!("ERROR", line_num - 1, "The data volume is greater than the addressable maximun space");
+                no_errors = false;
+            }
+            if ast.inst == "SET" {
+                if ast.arg_1.is_empty() {
+                    log!("ERROR", line_num, "\".SET\" instrcution need at least one argument");
+                    no_errors = false;
+                } else {
+                    match ast.arg_2 {
+                        setting_items::sinull() => {
+                            log!("WARNING", line_num, "Not supported");
+                        },
+                        _ => {
+                            if self.set_info.contains_key(&ast.arg_1) {
+                                self.set_info.insert(ast.arg_1, ast.arg_2);
+                            } else {
+                                log!("ERROR", line_num, "Unknown setting items");
+                                no_errors = false;
                             }
                         }
                     }
                 }
-            } else if line.starts_with(".DEFINE") {
-                match self.two_args(line.trim_start_matches(".DEFINE")) {
-                    Ok((di, dv)) => {
-                        match dv {
-                            setting_items::siarr(_) => log!("ERROR", line_num, "\".DEFINE\" type cannot be array"),
-                            setting_items::sibool(_) => log!("ERROR", line_num, "\".DEFINE\" type cannot be bool"),
-                            setting_items::sinum(_) => log!("ERROR", line_num, "\".DEFINE\" type cannot be number"),
-                            setting_items::sistr(s) => {self.define_info.insert(di, s);}
+            } else if ast.inst == "DATA" {
+                if ast.arg_1.is_empty() {
+                    log!("ERROR", line_num, "\".DATA\" instrcution need at least two argument");
+                    no_errors = false;
+                } else {
+                    match ast.arg_2 {
+                        setting_items::sinull() => {
+                            log!("ERROR", line_num, "\".DATA\" instrcution need at least two argument");
+                            no_errors = false;
+                        },
+                        setting_items::sinum(n) => {
+                            self.data_info.insert(ast.arg_1, self.data_buffer.len() as u16);
+                            self.data_buffer.push(n);
+                        },
+                        _ => {
+                            log!("ERROR", line_num, "\".DATA\" instrcution does not support defining as array or bool");
+                            no_errors = false;
                         }
-                    },
-                    Err(pe) => {
-                        match pe {
-                            ParseError::ArgumentStartWithNonUnderlineError(e) => {
-                                log!("ERROR", line_num, e);
-                            },
-                            ParseError::ArgumentStartWithNumberError(e) => {
-                                log!("ERROR", line_num, e);
-                            },
-                            ParseError::ParseNumberError(e) => {
-                                log!("ERROR", line_num, e);
-                            },
-                            ParseError::StateMachineError(e) => {
-                                log!("FATAL", line_num, e);
-                            },
-                            ParseError::TooManyArgmumentError(e) => {
-                                log!("ERROR", line_num, e);
+                    }
+                }
+            } else if ast.inst == "ARRAY" {
+                if ast.arg_1.is_empty() {
+                    log!("ERROR", line_num, "\".ARRAY\" instrcution need at least two argument");
+                    no_errors = false;
+                } else {
+                    match ast.arg_2 {
+                        setting_items::sinull() => {
+                            log!("ERROR", line_num, "\".ARRAY\" instrcution need at least two argument");
+                            no_errors = false;
+                        },
+                        setting_items::siarr(a) => {
+                            if self.data_info.contains_key(&ast.arg_1) {
+                                log!("ERROR", line_num, "Duplicate definition");
+                                no_errors = false;
+                            } else {
+                                self.data_info.insert(ast.arg_1, data_pointer);
                             }
+                            for i in a {
+                                self.data_buffer.push(i);
+                            }
+                        },
+                        setting_items::sistr(s) => {
+                            if self.data_info.contains_key(&ast.arg_1) {
+                                log!("ERROR", line_num, "Duplicate definition");
+                                no_errors = false;
+                            } else {
+                                self.data_info.insert(ast.arg_1, data_pointer);
+                            }
+                            for i in s.chars() {
+                                self.data_buffer.push(i as u16);
+                            }
+                        },
+                        _ => {
+                            log!("ERROR", line_num, "\".ARRAY\" instrcution does not support defining as number or bool");
+                            no_errors = false;
+                        }
+                    }
+                }
+            } else if ast.inst == "DEFINE" {
+                if ast.arg_1.is_empty() {
+                    log!("ERROR", line_num, "\".ARRAY\" instrcution need at least two argument");
+                    no_errors = false;
+                } else {
+                    match ast.arg_2 {
+                        setting_items::sistr(s) => {
+                            if self.define_info.contains_key(&ast.arg_1) {
+                                log!("ERROR", line_num, "Duplicate definition");
+                                no_errors = false;
+                            } else {
+                                self.define_info.insert(ast.arg_1, s);
+                            }
+                        },
+                        _ => {
+                            log!("ERROR", line_num, "\".DEFINE\" instrcution does not support defining as number or bool or array");
+                            no_errors = false;
                         }
                     }
                 }
             } else {
-                log!("ERROR", line_num, "Unknown Instruction");
+                log!("ERROR", line_num, "Unknown dot instuction");
+                no_errors = false;
             }
         }
+        no_errors
     }
 
     pub fn getinfo(&self) -> (HashMap<String, setting_items>, HashMap<String, u16>, HashMap<String, String>, Vec<u16>) {
         (self.set_info.clone(), self.data_info.clone(), self.define_info.clone(), self.data_buffer.clone())
     }
     /// Instructions that need to remove the beginning of a line
-    fn one_arg(&self, line: &str) -> Result<String, ParseError> {
-        let mut curr_state = IDLE;
-
-        let mut arg = String::new();
-
-        for c in line.chars() {
-            match curr_state {
-                IDLE => {
-                    if c == ' ' && c == '\t' {
-                        curr_state = GET_ARG_1_FIRST_CHAR;
-                    }
-                },
-                GET_ARG_FIRST_CHAR => {
-                    if c.is_ascii_digit() {
-                        return Err(ParseError::ArgumentStartWithNumberError(ASWNError));
-                    } else if c.is_ascii_punctuation() && c != '_' {
-                        return Err(ParseError::ArgumentStartWithNonUnderlineError(ASWNUError));
-                    } else {
-                        arg.push(c);
-                        curr_state = GET_ARG_1;
-                    }
-                },
-                GET_ARG => {
-                    if c != '\n' && c != ' ' && c != '\t' {
-                        arg.push(c)
-                    } else {
-                        curr_state = ARG_1_FINISH;
-                    }
-                },
-                ARG_1_FINISH => {
-                    if c != ' ' && c != '\t' && c != '\n' {
-                        return Err(ParseError::TooManyArgmumentError(TMAError));
-                    }
-                },
-                _ => {
-                    curr_state = IDLE;
-                    return Err(ParseError::StateMachineError(SMError));
-                }
-            }
-        }
-        return Ok(arg);
-    }
-
-    /// Instructions that need to remove the beginning of a line
-    fn two_args(&self, line: &str) -> Result<(String, setting_items), ParseError> {
-        let arg_str: u8 = 0b0;
-        let arg_not_str: u8 = 0b1;
-
-        let mut curr_state = IDLE;
-
-        let mut arg_2_type = arg_not_str;
-
-        let mut arg_1 = String::new();
-        let mut arg_2 = String::new();
-
-        for c in line.chars() {
-            match curr_state {
-                IDLE => {
-                    if c == ' ' && c == '\t' {
-                        curr_state = GET_ARG_1_FIRST_CHAR;
-                    }
-                },
-                GET_ARG_1_FIRST_CHAR => {
-                    if c.is_ascii_digit() {
-                        return Err(ParseError::ArgumentStartWithNumberError(ASWNError));
-                    } else if c.is_ascii_punctuation() && c != '_' {
-                        return Err(ParseError::ArgumentStartWithNonUnderlineError(ASWNUError));
-                    } else {
-                        arg_1.push(c);
-                        curr_state = GET_ARG_1;
-                    }
-                },
-                GET_ARG_1 => {
-                    if c != ' ' && c != '\t' {
-                        arg_1.push(c)
-                    } else {
-                        curr_state = ARG_1_FINISH;
-                    }
-                },
-                ARG_1_FINISH => {
-                    if c != ' ' && c != '\t' {
-                        if c == '\"' {
-                            arg_2_type = arg_str;
-                            curr_state = GET_ARG_2;
-                        } else {
-                            arg_2.push(c);
-                            curr_state = GET_ARG_2;
-                        }
-                    }
-                },
-                GET_ARG_2 => {
-                    if arg_2_type == arg_not_str {
-                        if c != ' ' && c != '\t' && c != '\n' {
-                            arg_2.push(c);
-                        } else {
-                            curr_state = FINISH;
-                        }
-                    } else if arg_2_type == arg_str {
-                        if c != '\"' {
-                            arg_2.push(c);
-                        } else {
-                            curr_state = FINISH;
-                        }
-                    } else {
-                        return Err(ParseError::StateMachineError(SMError));
-                    }
-                },
-                FINISH => {
-                    if c != ' ' && c != '\t' && c != '\n' {
-                        return Err(ParseError::TooManyArgmumentError(TMAError));
-                    }
-                }
-                _ => {
-                    curr_state = IDLE;
-                    return Err(ParseError::StateMachineError(SMError));
-                }
-            }
-        }
-
-        if arg_2_type == arg_not_str {
-            if arg_2.contains(",") {
-                let data_arr_buffer = arg_2.split(",").collect::<Vec<_>>();
-                let mut data_arr = vec![];
-                for data in data_arr_buffer {
-                    match self.str2num(data) {
-                        Ok(a) => data_arr.push(a),
-                        Err(e) => return Err(ParseError::ParseNumberError(e))
-                    }
-                }
-                return Ok((arg_1, setting_items::siarr(data_arr)));
-            } else {
-                match self.str2num(arg_2.as_str()) {
-                    Ok(n) => return Ok((arg_1, setting_items::sinum(n))),
-                    Err(e) => return Err(ParseError::ParseNumberError(e))
-                }
-            }
-        } else if arg_2_type == arg_str {
-            if arg_2.to_ascii_uppercase() == "TRUE" {
-                return Ok((arg_1, setting_items::sibool(true)));
-            } else if arg_2.to_ascii_uppercase() == "FALSE" {
-                return Ok((arg_1, setting_items::sibool(false)));
-            } else {
-                return Ok((arg_1, setting_items::sistr(arg_2)));
-            }
-        } else {
-            return Err(ParseError::StateMachineError(SMError));
-        }
-    }
 
     fn str2num(&self, org_str: &str) -> Result<u16, ParseIntError> {
         if org_str.ends_with("H") {

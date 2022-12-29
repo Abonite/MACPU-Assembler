@@ -21,8 +21,6 @@ struct Args {
     input_file: String,
     #[arg(short, long)]
     output_file: String,
-    #[arg(short, long)]
-    toml_file: String,
     #[arg(long, default_value_t = 0)]
     code_start_addr: u16,
     #[arg(long, default_value_t = 0x1000)]
@@ -38,14 +36,20 @@ fn main() {
 
     let data = SourceFileSpliter(&args.input_file);
 
-    let (mut d, data) = DotInstrctionsProcessor::new(data);
-    d.generate();
-    let (a, b, c, d) = d.getinfo();
+    let (mut dip, data) = DotInstrctionsProcessor::new(data);
+    if !dip.lexical_check() {
+        panic!("[ERROR] Due to early errors, compiler is stoped");
+    }
+    if !dip.syntax_check() {
+        panic!("[ERROR] Due to early errors, complier is stoped");
+    }
+
+    let (a, b, c, d) = dip.getinfo();
+    println!("[DEBUG]: set info - {:?}", a);
+    println!("[DEBUG]: data info - {:?}", b);
+    println!("[DEBUG]: define info - {:?}", c);
+    println!("[DEBUG]: data buffer - {:?}", d);
 
     let mut a = InstructionProcessor::new(data);
     a.syntax_check();
-
-    let mut MCAS = Assembler::new(&args.toml_file.as_str());
-    MCAS.set(Some(args.code_start_addr), Some(args.data_start_addr), Some(args.stack_start_addr), args.compile_mode);
-    MCAS.generate_bcode(args.input_file.as_str(), &args.output_file.as_str());
 }

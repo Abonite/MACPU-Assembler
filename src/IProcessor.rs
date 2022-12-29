@@ -18,8 +18,13 @@ enum arg_type {
     null()
 }
 
+enum inst_type {
+    label(String),
+    inst(String)
+}
+
 struct AST {
-    inst: String,
+    inst: inst_type,
     arg_1: arg_type,
     arg_2: arg_type
 }
@@ -40,27 +45,33 @@ impl InstructionProcessor {
 
     fn ast_generate(&mut self, line: String) {
         let mut current_state = IDLE;
-        let mut ast = AST{
-            inst: String::new(),
+
+        let mut inst = String::new();
+        let mut arg_1 = String::new();
+        let mut arg_2 = String::new();
+
+        let mut ast = AST {
+            inst: inst_type::inst(String::new()),
             arg_1: arg_type::null(),
             arg_2: arg_type::null()
         };
-
-        let mut arg_1 = String::new();
-        let mut arg_2 = String::new();
 
         for c in line.chars() {
             match current_state {
                 IDLE => {
                     if c != ' ' && c != '\t' {
                         current_state = INST;
-                        ast.inst.push(c);
+                        inst.push(c);
                     }
                 },
                 INST => {
                     if c != ' ' && c != '\t' && c != '\n' {
-                        ast.inst.push(c)
+                        inst.push(c)
                     } else if c == '\n' {
+                        ast.inst = inst_type::inst(inst);
+                        break;
+                    } else if c == ':'{
+                        ast.inst = inst_type::label(inst);
                         break;
                     } else if c == ' ' || c == '\t' {
                         current_state = GET_ARG_1_FIRST_CHAR;
