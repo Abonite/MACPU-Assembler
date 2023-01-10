@@ -120,6 +120,7 @@ impl DotInstrctionsProcessor {
                         }
                     },
                     GET_ARG_1_FIRST_CHAR => {
+                        // TODO: If you don’t judge whether there is a line break here, will there be any problems?
                         if c != ' ' && c != '\t' {
                             if c.is_ascii_digit() || (c.is_ascii_punctuation() && c != '_') {
                                 log!("ERROR", line_num, "The argument can not start with number or punctuation but \"_\"");
