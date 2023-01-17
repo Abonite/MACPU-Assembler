@@ -1,6 +1,6 @@
-# pycpu_assembler
+# macpu_assembler
 
-A assembler of my pycpu
+A assembler of my macpu
 
 ---
 
