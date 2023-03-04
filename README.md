@@ -16,6 +16,14 @@ At present, this assembler only supports single-file compilation, that is, it do
 
 ## MACPU assembly syntax
 
+### naming, whitespace and comments
+
+When naming various variables, the first letter can only be letters or underscores, and only letters, numbers or underscores can be used in the entire name.
+
+In MACPU assembly, there are no special requirements for blank characters at the beginning of the line and in the line, that is to say, spaces (**" "**) and tabs (**"\t"**) will be treated the same. The only way to judge the end of the line is a newline character (**"\n"**) or read to the end of the line comment (**";"**).
+
+In MACPU assembly, comments should start with quotes **";"**.
+
 ### preprocessing command
 
 Preprocessing commands are special commands used to set assembler properties, inform the assembler about the program, or provide developers with convenient development. Such commands start with a period "***.***", such as "***.SET***". They are preprocessed or recorded by the compiler before the compilation action begins.
