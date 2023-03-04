@@ -1,4 +1,4 @@
-# pycpu_assembler
+# macpu_assembler
 
 A assembler of my MACPU
 
