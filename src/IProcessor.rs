@@ -139,7 +139,7 @@ impl InstructionProcessor {
                         arg_2: arg_type::null()
                     };
 
-                    self.ast_buffer.push((line_num, ast));
+                    self.code_ast_buffer.push((line_num, ast));
                 } else {
                     continue;
                 }

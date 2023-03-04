@@ -1,10 +1,18 @@
 # pycpu_assembler
 
-A assembler of my pycpu
+A assembler of my MACPU
 
 ---
 
-内存分配
+## About
+
+In order to drive MACPU and make it have more application scenarios, we must implement a compiler of MACPU assembly language. In order to implement this compiler, I chose the high-performance and memory-safe rust language for development.
+
+For the algorithm model of MACPU, please refer to [here](https://github.com/Abonite/MACPU-model); for the FPGA implementation of MACPU, please refer to [here](https://github.com/Abonite/MACPU-FPGA).
+
+At present, this assembler only supports single-file compilation, that is, it does not have the link function for the time being.
+
+---
 
 工作原理
 
