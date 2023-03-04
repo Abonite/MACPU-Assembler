@@ -24,6 +24,12 @@ In MACPU assembly, there are no special requirements for blank characters at the
 
 In MACPU assembly, comments should start with quotes **";"**.
 
+### type of data
+
+In MACPU, you can use a variety of data types to identify, some are used to represent the base of the data, for example, "**hex**" represents hexadecimal, "**oct**" represents octal, and "**bin**" represents binary. When using, you only need to directly Just append these representations before the number, if nothing is added, it means decimal data, such as "**hex7FFF**", "**oct756**" and so on.
+
+In addition, there are some tags used to indicate the storage form and data type of data in memory, such tags are "**ubyte**", "**byte**", "**uword**", "**word**", "**udword**", "**dword**". When defining data, if the developer does not specify the storage form of the data in the memory, it will use "udword" for storage by default, which also corresponds to the 32-bit unsigned integer in the high-level language. The definition of the sign bit will affect the compiler's error checking and optimization.
+
 ### preprocessing command
 
 Preprocessing commands are special commands used to set assembler properties, inform the assembler about the program, or provide developers with convenient development. Such commands start with a period "***.***", such as "***.SET***". They are preprocessed or recorded by the compiler before the compilation action begins.
