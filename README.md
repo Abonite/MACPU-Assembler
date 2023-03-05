@@ -42,6 +42,18 @@ In MACPU assembly language, the following preprocessing instructions are current
 - **ARR** - This instruction will create a continuous piece of data, just like an array in C language. Same as in C language, this instruction requires developers to ensure that the internal data must all be of the same type, like this: "***.ARR Byte MYDATA 0,1,2,3,4***", which will not affect development The follow-up operation of the personnel, because the processing and use of the array still needs to be written by the developer, but this will affect the behavior of the assembler, because different data types will occupy different lengths in memory, and the assembler will also Perform corresponding detection for the data type. Therefore, when using **ARR**, it is recommended that developers record the length of the array at the same time to prevent out-of-bounds. Same as "**STR**", when developers use "**MYDATA**", the program will get the location of the first value of this array in memory
 - **DEF** - This instruction is the same as the macro definition in C language, and only provides the function of string replacement. This replacement will be performed after the precompilation command processing is completed and before the official compilation starts.
 
+### Representation of various elements
+
+When writing assembly language code, we come across various elements: instructions, registers, immediate numbers, addresses, etc. When writing code specifically, these elements should be expressed in the following form:
+
+- **instruction** - All assembly instructions should appear at the beginning of the line, just like the old 8086 assembly, such as "***ADD %A1, %A2, %AR1***".All instructions must be in upper case
+- **register** - All registers should start with a percent sign "**%**".All registers must be in upper case
+- **immediate number** - Immediate numbers do not need to add any tags, the assembler will automatically recognize them
+- **address** - All addresses should be marked with "**[]**", for example: "**[%A1]**" or "**[hex889]**"
+- **label** - A label is not an instruction, it is only used to prompt the compiler for some important program nodes, which can help developers simplify development when using instructions similar to "**JMP**". Labels must end with a colon "**:**", eg "**LOOP:**". Labels can be uppercase or lowercase
+
+---
+
 工作原理
 
 1. 读取文件并将文件按行拆分，获得一个Vector，其中的每一个元素都是行字符串与行号的元组

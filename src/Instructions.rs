@@ -1,230 +1,195 @@
 use std::collections::HashMap;
+use std::error::Error;
+use std::fmt::{Display, Formatter};
 
-enum INFO {
-    Comb(HashMap<Vec<String>, u16>),
-    Notcomb(HashMap<Vec<String>, bool>)
+#[derive(Debug)]
+struct NotAValidRegisterError {
+    inst: String,
+    register: String
 }
 
-pub struct inst_info {
-    bcode: u16,
-    arg_num: u8,
-    comb_inst: Option<bool>,
-    arg_kinds_info: Option<INFO>
+impl Error for NotAValidRegisterError {}
+impl Display for NotAValidRegisterError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "In instruction {}, {} is not a valid register!", self.inst, self.register)
+    }
 }
 
-pub fn get_instructions() -> HashMap<String, inst_info> {
-    HashMap::from(
-        [
-            (String::from("NOP"),
-            inst_info{
-                bcode: 0x0000,
-                arg_num: 0,
-                comb_inst: None,
-                arg_kinds_info: None
-            }),
-            (String::from("MOV"),
-            inst_info{
-                bcode: 0x0001,
-                arg_num: 2,
-                comb_inst: Some(true),
-                arg_kinds_info: Some(INFO::Comb(HashMap::from([
-                    (vec![String::from("addr"), String::from("regs")], 0),
-                    (vec![String::from("regs"), String::from("regs")], 1),
-                    (vec![String::from("regs"), String::from("addr")], 2)
-                ])))
-            }),
-            (String::from("LOAD"),
-            inst_info{
-                bcode: 0x0004,
-                arg_num: 2,
-                comb_inst: Some(false),
-                arg_kinds_info: Some(INFO::Notcomb(HashMap::from([
-                    (vec![String::from("imdn"), String::from("regs")], true),
-                ])))
-            }),
-            (String::from("ADD"),
-            inst_info{
-                bcode: 0x0100,
-                arg_num: 2,
-                comb_inst: Some(false),
-                arg_kinds_info: Some(INFO::Notcomb(HashMap::from([
-                    (vec![String::from("regs"), String::from("regs")], true),
-                ])))
-            }),
-            (String::from("SUB"),
-            inst_info{
-                bcode: 0x0101,
-                arg_num: 2,
-                comb_inst: Some(false),
-                arg_kinds_info: Some(INFO::Notcomb(HashMap::from([
-                    (vec![String::from("regs"), String::from("regs")], true),
-                ])))
-            }),
-            (String::from("AND"),
-            inst_info{
-                bcode: 0x0102,
-                arg_num: 2,
-                comb_inst: Some(false),
-                arg_kinds_info: Some(INFO::Notcomb(HashMap::from([
-                    (vec![String::from("regs"), String::from("regs")], true),
-                ])))
-            }),
-            (String::from("OR"),
-            inst_info{
-                bcode: 0x0103,
-                arg_num: 2,
-                comb_inst: Some(false),
-                arg_kinds_info: Some(INFO::Notcomb(HashMap::from([
-                    (vec![String::from("regs"), String::from("regs")], true),
-                ])))
-            }),
-            // Logical Not
-            (String::from("LNOT"),
-            inst_info{
-                bcode: 0x0104,
-                arg_num: 1,
-                comb_inst: Some(false),
-                arg_kinds_info: Some(INFO::Notcomb(HashMap::from([
-                    (vec![String::from("regs")], true),
-                ])))
-            }),
-            // Bitwise Not
-            (String::from("BNOT"),
-            inst_info{
-                bcode: 0x0105,
-                arg_num: 1,
-                comb_inst: Some(false),
-                arg_kinds_info: Some(INFO::Notcomb(HashMap::from([
-                    (vec![String::from("regs")], true),
-                ])))
-            }),
-            (String::from("XOR"),
-            inst_info{
-                bcode: 0x0106,
-                arg_num: 2,
-                comb_inst: Some(false),
-                arg_kinds_info: Some(INFO::Notcomb(HashMap::from([
-                    (vec![String::from("regs"), String::from("regs")], true),
-                ])))
-            }),
-            (String::from("RAND"),
-            inst_info{
-                bcode: 0x0107,
-                arg_num: 1,
-                comb_inst: Some(false),
-                arg_kinds_info: Some(INFO::Notcomb(HashMap::from([
-                    (vec![String::from("regs")], true),
-                ])))
-            }),
-            (String::from("ROR"),
-            inst_info{
-                bcode: 0x0108,
-                arg_num: 1,
-                comb_inst: Some(false),
-                arg_kinds_info: Some(INFO::Notcomb(HashMap::from([
-                    (vec![String::from("regs")], true),
-                ])))
-            }),
-            (String::from("RXOR"),
-            inst_info{
-                bcode: 0x0109,
-                arg_num: 1,
-                comb_inst: Some(false),
-                arg_kinds_info: Some(INFO::Notcomb(HashMap::from([
-                    (vec![String::from("regs")], true),
-                ])))
-            }),
-            (String::from("LSL"),
-            inst_info{
-                bcode: 0x010A,
-                arg_num: 2,
-                comb_inst: Some(false),
-                arg_kinds_info: Some(INFO::Notcomb(HashMap::from([
-                    (vec![String::from("regs"), String::from("regs")], true),
-                ])))
-            }),
-            (String::from("LSR"),
-            inst_info{
-                bcode: 0x010B,
-                arg_num: 2,
-                comb_inst: Some(false),
-                arg_kinds_info: Some(INFO::Notcomb(HashMap::from([
-                    (vec![String::from("regs"), String::from("regs")], true),
-                ])))
-            }),
-            (String::from("ASL"),
-            inst_info{
-                bcode: 0x010C,
-                arg_num: 2,
-                comb_inst: Some(false),
-                arg_kinds_info: Some(INFO::Notcomb(HashMap::from([
-                    (vec![String::from("regs"), String::from("regs")], true),
-                ])))
-            }),
-            (String::from("ASR"),
-            inst_info{
-                bcode: 0x010D,
-                arg_num: 2,
-                comb_inst: Some(false),
-                arg_kinds_info: Some(INFO::Notcomb(HashMap::from([
-                    (vec![String::from("regs"), String::from("regs")], true),
-                ])))
-            }),
-            (String::from("CSL"),
-            inst_info{
-                bcode: 0x010E,
-                arg_num: 2,
-                comb_inst: Some(false),
-                arg_kinds_info: Some(INFO::Notcomb(HashMap::from([
-                    (vec![String::from("regs"), String::from("regs")], true),
-                ])))
-            }),
-            (String::from("CSR"),
-            inst_info{
-                bcode: 0x010F,
-                arg_num: 2,
-                comb_inst: Some(false),
-                arg_kinds_info: Some(INFO::Notcomb(HashMap::from([
-                    (vec![String::from("regs"), String::from("regs")], true),
-                ])))
-            }),
-            (String::from("INC"),
-            inst_info{
-                bcode: 0x0110,
-                arg_num: 1,
-                comb_inst: Some(false),
-                arg_kinds_info: Some(INFO::Notcomb(HashMap::from([
-                    (vec![String::from("regs")], true),
-                ])))
-            }),
-            (String::from("DEC"),
-            inst_info{
-                bcode: 0x0111,
-                arg_num: 1,
-                comb_inst: Some(false),
-                arg_kinds_info: Some(INFO::Notcomb(HashMap::from([
-                    (vec![String::from("regs")], true),
-                ])))
-            }),
-            (String::from("JMP"),
-            inst_info{
-                bcode: 0x0200,
-                arg_num: 1,
-                comb_inst: Some(false),
-                arg_kinds_info: Some(INFO::Notcomb(HashMap::from([
-                    (vec![String::from("addr")], true),
-                    (vec![String::from("label")], true),
-                ])))
-            }),
-            (String::from("INT"),
-            inst_info{
-                bcode: 0x8000,
-                arg_num: 1,
-                comb_inst: Some(false),
-                arg_kinds_info: Some(INFO::Notcomb(HashMap::from([
-                    (vec![String::from("imdn")], true),
-                ])))
-            }),
-        ]
-    )
+const all_register: HashMap<String, u8> = HashMap::from_iter(vec![
+    (String::from("ZERO"), 0_u8), (String::from("PC"), 41_u8),
+    // Part A Register
+    (String::from("A1"), 1_u8), (String::from("A2"), 2_u8),
+    (String::from("A3"), 3_u8), (String::from("A4"), 4_u8),
+    (String::from("AR1"), 5_u8), (String::from("AR2"), 6_u8),
+    (String::from("AR3"), 7_u8), (String::from("ASS"), 8_u8),
+    (String::from("ASP"), 9_u8), (String::from("ADS"), 10_u8),
+    // Part B Register
+    (String::from("B1"), 11_u8), (String::from("B2"), 12_u8),
+    (String::from("B3"), 13_u8), (String::from("B4"), 14_u8),
+    (String::from("BR1"), 15_u8), (String::from("BR2"), 16_u8),
+    (String::from("BR3"), 17_u8), (String::from("BSS"), 18_u8),
+    (String::from("BSP"), 19_u8), (String::from("BDS"), 20_u8),
+    // Part C Register
+    (String::from("C1"), 21_u8), (String::from("C2"), 22_u8),
+    (String::from("C3"), 23_u8), (String::from("C4"), 24_u8),
+    (String::from("CR1"), 25_u8), (String::from("CR2"), 26_u8),
+    (String::from("CR3"), 27_u8), (String::from("CSS"), 28_u8),
+    (String::from("CSP"), 29_u8), (String::from("CDS"), 30_u8),
+    // Part D Register
+    (String::from("D1"), 31_u8), (String::from("D2"), 32_u8),
+    (String::from("D3"), 33_u8), (String::from("D4"), 34_u8),
+    (String::from("DR1"), 35_u8), (String::from("DR2"), 36_u8),
+    (String::from("DR3"), 37_u8), (String::from("DSS"), 38_u8),
+    (String::from("DSP"), 39_u8), (String::from("DDS"), 40_u8)
+    ]);
+
+const nonzero_register: HashMap<String, u8> = HashMap::from_iter(vec![
+    (String::from("PC"), 41_u8),
+    // Part A Register
+    (String::from("A1"), 1_u8), (String::from("A2"), 2_u8),
+    (String::from("A3"), 3_u8), (String::from("A4"), 4_u8),
+    (String::from("AR1"), 5_u8), (String::from("AR2"), 6_u8),
+    (String::from("AR3"), 7_u8), (String::from("ASS"), 8_u8),
+    (String::from("ASP"), 9_u8), (String::from("ADS"), 10_u8),
+    // Part B Register
+    (String::from("B1"), 11_u8), (String::from("B2"), 12_u8),
+    (String::from("B3"), 13_u8), (String::from("B4"), 14_u8),
+    (String::from("BR1"), 15_u8), (String::from("BR2"), 16_u8),
+    (String::from("BR3"), 17_u8), (String::from("BSS"), 18_u8),
+    (String::from("BSP"), 19_u8), (String::from("BDS"), 20_u8),
+    // Part C Register
+    (String::from("C1"), 21_u8), (String::from("C2"), 22_u8),
+    (String::from("C3"), 23_u8), (String::from("C4"), 24_u8),
+    (String::from("CR1"), 25_u8), (String::from("CR2"), 26_u8),
+    (String::from("CR3"), 27_u8), (String::from("CSS"), 28_u8),
+    (String::from("CSP"), 29_u8), (String::from("CDS"), 30_u8),
+    // Part D Register
+    (String::from("D1"), 31_u8), (String::from("D2"), 32_u8),
+    (String::from("D3"), 33_u8), (String::from("D4"), 34_u8),
+    (String::from("DR1"), 35_u8), (String::from("DR2"), 36_u8),
+    (String::from("DR3"), 37_u8), (String::from("DSS"), 38_u8),
+    (String::from("DSP"), 39_u8), (String::from("DDS"), 40_u8)
+    ]);
+
+const nonpc_register: HashMap<String, u8> = HashMap::from_iter(vec![
+    (String::from("ZERO"), 0_u8),
+    // Part A Register
+    (String::from("A1"), 1_u8), (String::from("A2"), 2_u8),
+    (String::from("A3"), 3_u8), (String::from("A4"), 4_u8),
+    (String::from("AR1"), 5_u8), (String::from("AR2"), 6_u8),
+    (String::from("AR3"), 7_u8), (String::from("ASS"), 8_u8),
+    (String::from("ASP"), 9_u8), (String::from("ADS"), 10_u8),
+    // Part B Register
+    (String::from("B1"), 11_u8), (String::from("B2"), 12_u8),
+    (String::from("B3"), 13_u8), (String::from("B4"), 14_u8),
+    (String::from("BR1"), 15_u8), (String::from("BR2"), 16_u8),
+    (String::from("BR3"), 17_u8), (String::from("BSS"), 18_u8),
+    (String::from("BSP"), 19_u8), (String::from("BDS"), 20_u8),
+    // Part C Register
+    (String::from("C1"), 21_u8), (String::from("C2"), 22_u8),
+    (String::from("C3"), 23_u8), (String::from("C4"), 24_u8),
+    (String::from("CR1"), 25_u8), (String::from("CR2"), 26_u8),
+    (String::from("CR3"), 27_u8), (String::from("CSS"), 28_u8),
+    (String::from("CSP"), 29_u8), (String::from("CDS"), 30_u8),
+    // Part D Register
+    (String::from("D1"), 31_u8), (String::from("D2"), 32_u8),
+    (String::from("D3"), 33_u8), (String::from("D4"), 34_u8),
+    (String::from("DR1"), 35_u8), (String::from("DR2"), 36_u8),
+    (String::from("DR3"), 37_u8), (String::from("DSS"), 38_u8),
+    (String::from("DSP"), 39_u8), (String::from("DDS"), 40_u8)
+    ]);
+
+const general_register: HashMap<String, u8> = HashMap::from_iter(vec![
+    // Part A Register
+    (String::from("A1"), 1_u8), (String::from("A2"), 2_u8),
+    (String::from("A3"), 3_u8), (String::from("A4"), 4_u8),
+    (String::from("AR1"), 5_u8), (String::from("AR2"), 6_u8),
+    (String::from("AR3"), 7_u8), (String::from("ASS"), 8_u8),
+    (String::from("ASP"), 9_u8), (String::from("ADS"), 10_u8),
+    // Part B Register
+    (String::from("B1"), 11_u8), (String::from("B2"), 12_u8),
+    (String::from("B3"), 13_u8), (String::from("B4"), 14_u8),
+    (String::from("BR1"), 15_u8), (String::from("BR2"), 16_u8),
+    (String::from("BR3"), 17_u8), (String::from("BSS"), 18_u8),
+    (String::from("BSP"), 19_u8), (String::from("BDS"), 20_u8),
+    // Part C Register
+    (String::from("C1"), 21_u8), (String::from("C2"), 22_u8),
+    (String::from("C3"), 23_u8), (String::from("C4"), 24_u8),
+    (String::from("CR1"), 25_u8), (String::from("CR2"), 26_u8),
+    (String::from("CR3"), 27_u8), (String::from("CSS"), 28_u8),
+    (String::from("CSP"), 29_u8), (String::from("CDS"), 30_u8),
+    // Part D Register
+    (String::from("D1"), 31_u8), (String::from("D2"), 32_u8),
+    (String::from("D3"), 33_u8), (String::from("D4"), 34_u8),
+    (String::from("DR1"), 35_u8), (String::from("DR2"), 36_u8),
+    (String::from("DR3"), 37_u8), (String::from("DSS"), 38_u8),
+    (String::from("DSP"), 39_u8), (String::from("DDS"), 40_u8)
+    ]);
+
+struct Instruction {
+    inst_type: String,
+    inst_name: String,
+    op_code: u16,
+    op_code_lenth: u8,
+    // binary register label
+    source_register_label: Option<u8>,
+    target_register_label: Option<u8>,
+    // binary immediate number
+    binary_immediate_number: Option<u32>,
+    source_register_lut: HashMap<String, u8>,
+    target_register_lut: HashMap<String, u8>
+}
+
+impl Instruction {
+    fn new(inst_type: String, inst_name: String, op_code: u16, srhm: HashMap<String, u8>, trhm: HashMap<String, u8>) -> Instruction {
+        Instruction {
+            inst_type,
+            inst_name,
+            op_code,
+            op_code_lenth: 10,
+            source_register_label: None,
+            target_register_label: None,
+            binary_immediate_number: None,
+            source_register_lut: srhm,
+            target_register_lut: trhm
+        }
+    }
+
+    fn setSourceRegister(&mut self, source_register: String) -> Result<(), NotAValidRegisterError> {
+        match self.source_register_lut.get(&source_register) {
+            None => return Err(NotAValidRegisterError{inst: self.inst_name, register: source_register}),
+            Some(v) => self.source_register_label = Some(v.clone())
+        };
+
+        Ok(())
+    }
+
+    fn setTargetRegister(&mut self, target_register: String) -> Result<(), NotAValidRegisterError> {
+        match self.target_register_lut.get(&target_register) {
+            None => return Err(NotAValidRegisterError{inst: self.inst_name, register: target_register}),
+            Some(v) => self.target_register_label = Some(v.clone())
+        };
+
+        Ok(())
+    }
+
+    fn setImmediateNumber(&mut self, immediate_number: String) {
+        // TODO: How to check the immediate number?
+    }
+}
+
+struct LOAD {
+    instruction: Instruction,
+    fsource_register: Option<String>,
+    ssource_register: Option<String>,
+}
+
+impl LOAD {
+    fn new(inst_name: String, op_code: u16) -> LOAD {
+        LOAD {
+            instruction: Instruction::new(String::from("memory"), inst_name, op_code, all_register, all_register),
+            fsource_register: None,
+            ssource_register: None,
+        }
+    }
 }
