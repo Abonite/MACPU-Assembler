@@ -1,0 +1,27 @@
+.SET CODESEGMENT    hex0
+.SET STACKSEGMENT   hex1000
+
+.SET DEFAULT_INIT   PART_A
+
+.VAR            RESULT      hex0
+.STR            RESULT_INFO "Calculation ends, the result is"
+
+.VAR            CALC_LOOP_TIMES     200
+.DEF            CALC_LOOP_COUNTER   %A1
+
+;load start info
+LOAD32  %A2, 1
+LOAD32  %A3, 1
+LOAD32  CALC_LOOP_COUNTER, CALC_LOOP_TIMES
+
+LOOP:
+    ADD     %A2, %A3, %AR1
+    MOVE    %A2, %A3
+    MOVE    %AR1, %A2
+    SUB     CALC_LOOP_COUNTER, 1, CALC_LOOP_COUNTER
+    EQ      CALC_LOOP_COUNTER, 0, %A4
+    OJMP    %A4, WB_RESULT
+    JMP     LOOP
+
+WB_RESULT:
+    STORE32 %AR1, RESULT

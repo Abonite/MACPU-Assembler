@@ -141,8 +141,30 @@ struct Instruction {
 }
 
 impl Instruction {
-    fn new(inst_type: String, inst_name: String, op_code: u16, srhm: HashMap<String, u8>, trhm: HashMap<String, u8>) -> Instruction {
-        Instruction {
+
+}
+
+struct LOAD {
+    inst_type: String,
+    inst_name: String,
+    op_code: u16,
+    op_code_lenth: u8,
+    // binary register label
+    source_register_label: Option<u8>,
+    target_register_label: Option<u8>,
+    // binary immediate number
+    binary_immediate_number: Option<u32>,
+    source_register_lut: HashMap<String, u8>,
+    target_register_lut: HashMap<String, u8>,
+    fsource_register_label: Option<u8>,
+    ssource_register_label: Option<u8>,
+    fsource_register_lut: HashMap<String, u8>,
+    ssource_register_lut: HashMap<String, u8>
+}
+
+impl LOAD {
+    fn new(inst_type: String, inst_name: String, op_code: u16) -> LOAD {
+        LOAD {
             inst_type,
             inst_name,
             op_code,
@@ -150,8 +172,12 @@ impl Instruction {
             source_register_label: None,
             target_register_label: None,
             binary_immediate_number: None,
-            source_register_lut: srhm,
-            target_register_lut: trhm
+            source_register_lut: all_register,
+            target_register_lut: all_register,
+            fsource_register_label: None,
+            ssource_register_label: None,
+            fsource_register_lut: all_register,
+            ssource_register_lut: all_register
         }
     }
 
@@ -176,20 +202,25 @@ impl Instruction {
     fn setImmediateNumber(&mut self, immediate_number: String) {
         // TODO: How to check the immediate number?
     }
-}
 
-struct LOAD {
-    instruction: Instruction,
-    fsource_register: Option<String>,
-    ssource_register: Option<String>,
-}
+    fn setFSourceRegister(&mut self, first_source_register: String) -> Result<(), NotAValidRegisterError> {
+        match self.fsource_register_lut.get(&first_source_register) {
+            None => return Err(NotAValidRegisterError{inst: self.inst_name, register: first_source_register}),
+            Some(v) => self.fsource_register_label = Some(v.clone())
+        };
 
-impl LOAD {
-    fn new(inst_name: String, op_code: u16) -> LOAD {
-        LOAD {
-            instruction: Instruction::new(String::from("memory"), inst_name, op_code, all_register, all_register),
-            fsource_register: None,
-            ssource_register: None,
-        }
+        Ok(())
+    }
+
+    fn setSSourceRegister(&mut self, second_source_register: String) -> Result<(), NotAValidRegisterError> {
+        match self.ssource_register_lut.get(&second_source_register) {
+            None => return Err(NotAValidRegisterError{inst: self.inst_name, register: second_source_register}),
+            Some(v) => self.ssource_register_label = Some(v.clone())
+        };
+
+        Ok(())
+    }
+
+    fn generateCode(&mut self) {
     }
 }
