@@ -1,6 +1,8 @@
+use core::num::dec2flt::parse::parse_number;
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
+use std::num::ParseIntError;
 
 #[derive(Debug)]
 struct NotAValidRegisterError {
@@ -199,8 +201,30 @@ impl LOAD {
         Ok(())
     }
 
-    fn setImmediateNumber(&mut self, immediate_number: String) {
-        // TODO: How to check the immediate number?
+    fn setImmediateNumber(&mut self, immediate_number: String) -> Result<(), ParseIntError>{
+        if immediate_number.starts_with("hex") {
+            self.binary_immediate_number = match u32::from_str_radix(immediate_number.trim_start_matches("hex"), 16) {
+                Ok(v) => Some(v),
+                Err(e) => return Err(e)
+            };
+        } else if immediate_number.starts_with("oct") {
+            self.binary_immediate_number = match u32::from_str_radix(immediate_number.trim_start_matches("oct"), 8) {
+                Ok(v) => Some(v),
+                Err(e) => return Err(e)
+            };
+        } else if immediate_number.starts_with("bin") {
+            self.binary_immediate_number = match u32::from_str_radix(immediate_number.trim_start_matches("bin"), 2) {
+                Ok(v) => Some(v),
+                Err(e) => return Err(e)
+            };
+        } else {
+            self.binary_immediate_number = match u32::from_str_radix(immediate_number.as_str(), 10) {
+                Ok(v) => Some(v),
+                Err(e) => return Err(e)
+            };
+        }
+
+        Ok(())
     }
 
     fn setFSourceRegister(&mut self, first_source_register: String) -> Result<(), NotAValidRegisterError> {
@@ -221,6 +245,11 @@ impl LOAD {
         Ok(())
     }
 
-    fn generateCode(&mut self) {
+    fn generateCode(&mut self, target_register: String, oargs: Vec<String>) {
+        match self.setTargetRegister(target_register) {
+            Ok(_) => (),
+            // TODO: How to handle exceptions?
+            Err(e) => ()
+        };
     }
 }
