@@ -1,4 +1,3 @@
-use core::num::dec2flt::parse::parse_number;
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
@@ -13,7 +12,7 @@ struct NotAValidRegisterError {
 impl Error for NotAValidRegisterError {}
 impl Display for NotAValidRegisterError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "In instruction {}, {} is not a valid register!", self.inst, self.register)
+        write!(f, "In instruction {}, {} is not a valid register", self.inst, self.register)
     }
 }
 
@@ -128,74 +127,43 @@ const general_register: HashMap<String, u8> = HashMap::from_iter(vec![
     (String::from("DSP"), 39_u8), (String::from("DDS"), 40_u8)
     ]);
 
-struct Instruction {
+pub struct LOAD {
     inst_type: String,
     inst_name: String,
-    op_code: u16,
-    op_code_lenth: u8,
+    op_code: u32,
     // binary register label
-    source_register_label: Option<u8>,
-    target_register_label: Option<u8>,
+    target_register_label: u32,
+    target_register_start_bit: u8,
     // binary immediate number
-    binary_immediate_number: Option<u32>,
-    source_register_lut: HashMap<String, u8>,
-    target_register_lut: HashMap<String, u8>
-}
-
-impl Instruction {
-
-}
-
-struct LOAD {
-    inst_type: String,
-    inst_name: String,
-    op_code: u16,
-    op_code_lenth: u8,
-    // binary register label
-    source_register_label: Option<u8>,
-    target_register_label: Option<u8>,
-    // binary immediate number
-    binary_immediate_number: Option<u32>,
-    source_register_lut: HashMap<String, u8>,
-    target_register_lut: HashMap<String, u8>,
-    fsource_register_label: Option<u8>,
-    ssource_register_label: Option<u8>,
-    fsource_register_lut: HashMap<String, u8>,
-    ssource_register_lut: HashMap<String, u8>
+    immediate_number: u32,
+    immediate_number_start_bit: u8,
+    fsource_register_label: u32,
+    ssource_register_label: u32,
+    fsource_register_start_bit: u8,
+    ssource_register_start_bit: u8
 }
 
 impl LOAD {
-    fn new(inst_type: String, inst_name: String, op_code: u16) -> LOAD {
+    pub fn new(inst_type: String, inst_name: String, op_code: u16, trsb: u8, insb: u8, fsrsb: u8, ssrsb: u8) -> LOAD {
         LOAD {
             inst_type,
             inst_name,
-            op_code,
-            op_code_lenth: 10,
-            source_register_label: None,
-            target_register_label: None,
-            binary_immediate_number: None,
-            source_register_lut: all_register,
-            target_register_lut: all_register,
-            fsource_register_label: None,
-            ssource_register_label: None,
-            fsource_register_lut: all_register,
-            ssource_register_lut: all_register
+            op_code: (op_code as u32) << 22,
+            target_register_label: 0,
+            target_register_start_bit: trsb,
+            immediate_number: 0,
+            immediate_number_start_bit: insb,
+            fsource_register_label: 0,
+            ssource_register_label: 0,
+            fsource_register_start_bit: fsrsb,
+            ssource_register_start_bit: ssrsb,
         }
     }
 
-    fn setSourceRegister(&mut self, source_register: String) -> Result<(), NotAValidRegisterError> {
-        match self.source_register_lut.get(&source_register) {
-            None => return Err(NotAValidRegisterError{inst: self.inst_name, register: source_register}),
-            Some(v) => self.source_register_label = Some(v.clone())
-        };
-
-        Ok(())
-    }
-
-    fn setTargetRegister(&mut self, target_register: String) -> Result<(), NotAValidRegisterError> {
-        match self.target_register_lut.get(&target_register) {
+    pub fn setTargetRegister(&mut self, target_register: String) -> Result<(), NotAValidRegisterError> {
+        match general_register.get(&target_register) {
             None => return Err(NotAValidRegisterError{inst: self.inst_name, register: target_register}),
-            Some(v) => self.target_register_label = Some(v.clone())
+            Some(v) => self.target_register_label = *v as u32
         };
 
         Ok(())
@@ -203,23 +171,23 @@ impl LOAD {
 
     fn setImmediateNumber(&mut self, immediate_number: String) -> Result<(), ParseIntError>{
         if immediate_number.starts_with("hex") {
-            self.binary_immediate_number = match u32::from_str_radix(immediate_number.trim_start_matches("hex"), 16) {
-                Ok(v) => Some(v),
+            self.immediate_number = match u32::from_str_radix(immediate_number.trim_start_matches("hex"), 16) {
+                Ok(v) => v << self.target_register_start_bit,
                 Err(e) => return Err(e)
             };
         } else if immediate_number.starts_with("oct") {
-            self.binary_immediate_number = match u32::from_str_radix(immediate_number.trim_start_matches("oct"), 8) {
-                Ok(v) => Some(v),
+            self.immediate_number = match u32::from_str_radix(immediate_number.trim_start_matches("oct"), 8) {
+                Ok(v) => v << self.target_register_start_bit,
                 Err(e) => return Err(e)
             };
         } else if immediate_number.starts_with("bin") {
-            self.binary_immediate_number = match u32::from_str_radix(immediate_number.trim_start_matches("bin"), 2) {
-                Ok(v) => Some(v),
+            self.immediate_number = match u32::from_str_radix(immediate_number.trim_start_matches("bin"), 2) {
+                Ok(v) => v << self.target_register_start_bit,
                 Err(e) => return Err(e)
             };
         } else {
-            self.binary_immediate_number = match u32::from_str_radix(immediate_number.as_str(), 10) {
-                Ok(v) => Some(v),
+            self.immediate_number = match u32::from_str_radix(immediate_number.as_str(), 10) {
+                Ok(v) => v << self.target_register_start_bit,
                 Err(e) => return Err(e)
             };
         }
@@ -228,28 +196,91 @@ impl LOAD {
     }
 
     fn setFSourceRegister(&mut self, first_source_register: String) -> Result<(), NotAValidRegisterError> {
-        match self.fsource_register_lut.get(&first_source_register) {
+        match all_register.get(&first_source_register) {
             None => return Err(NotAValidRegisterError{inst: self.inst_name, register: first_source_register}),
-            Some(v) => self.fsource_register_label = Some(v.clone())
+            Some(v) => self.fsource_register_label = (*v as u32) << self.fsource_register_start_bit
         };
 
         Ok(())
     }
 
     fn setSSourceRegister(&mut self, second_source_register: String) -> Result<(), NotAValidRegisterError> {
-        match self.ssource_register_lut.get(&second_source_register) {
+        match all_register.get(&second_source_register) {
             None => return Err(NotAValidRegisterError{inst: self.inst_name, register: second_source_register}),
-            Some(v) => self.ssource_register_label = Some(v.clone())
+            Some(v) => self.ssource_register_label = (*v as u32) << self.ssource_register_start_bit
         };
 
         Ok(())
     }
 
-    fn generateCode(&mut self, target_register: String, oargs: Vec<String>) {
+    fn generateCode(&mut self, line_num: usize, target_register: String, immediate_number: Option<String>, fsource_register: Option<String>, ssource_register: Option<String>) -> Result<u32, String>{
+        /// Considering the efficiency of the compiler, here is a method that consumes more memory and improves compilation speed.
+        /// Each instruction is processed by a coroutine, and at the same time, two memory spaces are opened for saving the processing results,
+        /// one is normal and the other is abnormal, and the space is consistent with the number of instructions in the compiled file.
+
+        let mut error_infos = String::new();
+        let mut error = false;
+
         match self.setTargetRegister(target_register) {
             Ok(_) => (),
-            // TODO: How to handle exceptions?
-            Err(e) => ()
+            Err(e) => {
+                error = true;
+                error_infos += &format!("Line: {} - {}\n", line_num, e)
+            }
         };
+
+        match immediate_number {
+            None => (),
+            Some(v) => match self.setImmediateNumber(v) {
+                Ok(_) => (),
+                Err(e) => {
+                    error = true;
+                    error_infos += &format!("Line: {} - An error occurred while parsing the immediate number: {}\n", line_num, e)
+                }
+            }
+        }
+
+        match fsource_register {
+            None => (),
+            Some(v) => match self.setFSourceRegister(v) {
+                Ok(_) => (),
+                Err(e) => {
+                    error = true;
+                    error_infos += &format!("Line: {} - {}\n", line_num, e)
+                }
+            }
+        }
+
+        match ssource_register {
+            None => (),
+            Some(v) => match self.setSSourceRegister(v) {
+                Ok(_) => (),
+                Err(e) => {
+                    error = true;
+                    error_infos += &format!("Line: {} - {}\n", line_num, e)
+                }
+            }
+        }
+        if error {
+            return Err(error_infos);
+        } else {
+            match self.argsToBinaryCode() {
+                Ok(v) => return Ok(v),
+                Err(_) => {
+                    error_infos += &format!("Line: {} - Binary opcode generation error, info: opcode: {:320b}, imd_num: {:320b}, t_r: {:320b}, fs_r: {:320b}, ss_r: {:320b}\n", line_num, self.op_code,self.immediate_number, self.target_register_label, self.fsource_register_label, self.ssource_register_label);
+                    return Err(error_infos);
+                }
+            }
+        }
+    }
+
+    fn argsToBinaryCode(&self) -> Result<u32, ()> {
+        let a = self.op_code + self.target_register_label + self.ssource_register_label + self.fsource_register_label;
+        let b = self.op_code | self.target_register_label | self.ssource_register_label | self.fsource_register_label;
+        if a == b {
+            return Ok(a);
+        } else {
+            return Err(());
+        }
     }
 }
