@@ -1,0 +1,103 @@
+use std::collections::HashMap;
+use std::num::ParseIntError;
+use std::error::Error;
+use std::fmt::{Display, Formatter};
+
+
+#[derive(Debug)]
+struct UnparseableStringError {
+    inst: String,
+    value: String
+}
+
+impl Error for UnparseableStringError {}
+impl Display for UnparseableStringError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "In instruction {}, {} cannot be parsed as a valid value", self.inst, self.value)
+    }
+}
+
+// Settings table
+const SETTINGS: HashMap<String, Setting_item> = HashMap::from_iter(vec![
+    (String::from("S_CODE_SA"), Setting_item::I(0x0)),
+    (String::from("S_DATA_SA"), Setting_item::I(0x2000)),
+    (String::from("S_STACK_SA"), Setting_item::I(0x3000))
+]);
+
+enum Setting_item {
+    B(bool),
+    I(u32)
+}
+
+pub struct SET {
+    setting_item: String,
+    value: String,
+    no_value_setting: bool
+}
+
+impl SET {
+    pub fn new(si: String, v: String, nvs: bool) -> SET {
+        SET {
+            setting_item: si,
+            value: v,
+            no_value_setting: nvs
+        }
+    }
+
+    pub fn setTable(&self, line_num: usize) -> Result<(), String> {
+        let mut error_infos = String::new();
+        let mut error = false;
+
+        match SETTINGS.get(&self.setting_item) {
+            None => error_infos += &format!("Line: {} - An illegal setting item {} is used in instruction {}\n", line_num, self.setting_item,String::from("SET")),
+            Some(v) => match v {
+                Setting_item::B(b) => {
+                    match self.Bool() {
+                        Ok(v) => {SETTINGS.insert(self.setting_item, Setting_item::B(v)); ()},
+                        Err(e) => {
+                            error = true;
+                            error_infos += &format!("Line: {} - {}\n", line_num, e);
+                        }
+                    }
+                },
+                Setting_item::I(i) => {
+                    match self.Int() {
+                        Ok(v) => {SETTINGS.insert(self.setting_item, Setting_item::I(v)); ()},
+                        Err(e) => {
+                            error = true;
+                            error_infos += &format!("Line: {} - {}\n", line_num, e);
+                        }
+                    }
+                },
+            }
+        }
+
+        if error {
+            return Err(error_infos);
+        } else {
+            return Ok(());
+        }
+    }
+
+    fn Bool(&self) -> Result<bool, UnparseableStringError>{
+        match self.value.as_str() {
+            "false" => Ok(false),
+            "true" => Ok(true),
+            "FALSE" => Ok(false),
+            "TRUE" => Ok(true),
+            _ => return Err(UnparseableStringError{inst: String::from("SET"), value: self.value})
+        }
+    }
+
+    fn Int(&self) -> Result<u32, ParseIntError> {
+        if self.value.starts_with("hex") {
+            return u32::from_str_radix(self.value.trim_start_matches("hex"), 16);
+        } else if self.value.starts_with("oct") {
+            return u32::from_str_radix(self.value.trim_start_matches("oct"), 8);
+        } else if self.value.starts_with("bin") {
+            return u32::from_str_radix(self.value.trim_start_matches("bin"), 2);
+        } else {
+            return u32::from_str_radix(self.value.as_str(), 10);
+        }
+    }
+}

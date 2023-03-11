@@ -10,7 +10,9 @@ Cargo.lock
 **/*.rs.bk
 
 /.vscode/
+/.VSCodeCounter/
 
 *.bo
 *.asm
 *.exe
+*.maasm

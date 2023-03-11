@@ -1,17 +1,14 @@
 extern crate clap;
 extern crate tokio;
 
-mod MCAssembler;
 mod SFSpliter;
 mod Instructions;
+mod DInstructions;
+mod MCAssembler;
 mod DIProcessor;
 mod IProcessor;
 
-use DIProcessor::DotInstrctionsProcessor;
-use Instructions::get_instructions;
 use SFSpliter::SourceFileSpliter;
-use IProcessor::InstructionProcessor;
-use MCAssembler::Assembler;
 use clap::{Parser, command};
 
 #[derive(Parser, Debug)]
