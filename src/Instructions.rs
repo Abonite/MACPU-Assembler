@@ -144,7 +144,7 @@ pub struct LOAD {
 }
 
 impl LOAD {
-    pub fn new(inst_type: String, inst_name: String, op_code: u16, trsb: u8, insb: u8, fsrsb: u8, ssrsb: u8) -> LOAD {
+    fn new(inst_type: String, inst_name: String, op_code: u16, trsb: u8, insb: u8, fsrsb: u8, ssrsb: u8) -> LOAD {
         LOAD {
             inst_type,
             inst_name,
@@ -160,10 +160,10 @@ impl LOAD {
         }
     }
 
-    pub fn setTargetRegister(&mut self, target_register: String) -> Result<(), NotAValidRegisterError> {
+    fn setTargetRegister(&mut self, target_register: String) -> Result<(), NotAValidRegisterError> {
         match general_register.get(&target_register) {
             None => return Err(NotAValidRegisterError{inst: self.inst_name, register: target_register}),
-            Some(v) => self.target_register_label = *v as u32
+            Some(v) => self.target_register_label = (*v as u32) << self.target_register_start_bit
         };
 
         Ok(())
@@ -172,22 +172,22 @@ impl LOAD {
     fn setImmediateNumber(&mut self, immediate_number: String) -> Result<(), ParseIntError>{
         if immediate_number.starts_with("hex") {
             self.immediate_number = match u32::from_str_radix(immediate_number.trim_start_matches("hex"), 16) {
-                Ok(v) => v << self.target_register_start_bit,
+                Ok(v) => v << self.immediate_number_start_bit,
                 Err(e) => return Err(e)
             };
         } else if immediate_number.starts_with("oct") {
             self.immediate_number = match u32::from_str_radix(immediate_number.trim_start_matches("oct"), 8) {
-                Ok(v) => v << self.target_register_start_bit,
+                Ok(v) => v << self.immediate_number_start_bit,
                 Err(e) => return Err(e)
             };
         } else if immediate_number.starts_with("bin") {
             self.immediate_number = match u32::from_str_radix(immediate_number.trim_start_matches("bin"), 2) {
-                Ok(v) => v << self.target_register_start_bit,
+                Ok(v) => v << self.immediate_number_start_bit,
                 Err(e) => return Err(e)
             };
         } else {
             self.immediate_number = match u32::from_str_radix(immediate_number.as_str(), 10) {
-                Ok(v) => v << self.target_register_start_bit,
+                Ok(v) => v << self.immediate_number_start_bit,
                 Err(e) => return Err(e)
             };
         }
@@ -213,7 +213,7 @@ impl LOAD {
         Ok(())
     }
 
-    fn generateCode(&mut self, line_num: usize, target_register: String, immediate_number: Option<String>, fsource_register: Option<String>, ssource_register: Option<String>) -> Result<u32, String>{
+    pub fn generateCode(&mut self, line_num: usize, target_register: String, immediate_number: Option<String>, fsource_register: Option<String>, ssource_register: Option<String>) -> Result<u32, String>{
         /// Considering the efficiency of the compiler, here is a method that consumes more memory and improves compilation speed.
         /// Each instruction is processed by a coroutine, and at the same time, two memory spaces are opened for saving the processing results,
         /// one is normal and the other is abnormal, and the space is consistent with the number of instructions in the compiled file.
@@ -261,6 +261,7 @@ impl LOAD {
                 }
             }
         }
+
         if error {
             return Err(error_infos);
         } else {
@@ -275,8 +276,210 @@ impl LOAD {
     }
 
     fn argsToBinaryCode(&self) -> Result<u32, ()> {
-        let a = self.op_code + self.target_register_label + self.ssource_register_label + self.fsource_register_label;
-        let b = self.op_code | self.target_register_label | self.ssource_register_label | self.fsource_register_label;
+        /// A easy way to check
+        let a = self.op_code + self.target_register_label + self.ssource_register_label + self.fsource_register_label + self.immediate_number;
+        let b = self.op_code | self.target_register_label | self.ssource_register_label | self.fsource_register_label + self.immediate_number;
+        if a == b {
+            return Ok(a);
+        } else {
+            return Err(());
+        }
+    }
+}
+
+pub struct STORE {
+    inst_type: String,
+    inst_name: String,
+    op_code: u32,
+    ftarget_register_label: u32,
+    starget_register_label: u32,
+    ftarget_register_start_bit: u8,
+    starget_register_start_bit: u8,
+    source_register_label: u32,
+    source_register_start_bit: u8
+}
+
+impl STORE {
+    pub fn new(inst_type: String, inst_name: String, op_code: u16) -> STORE {
+        STORE {
+            inst_type,
+            inst_name,
+            op_code: (op_code as u32) << 22,
+            ftarget_register_label: 0,
+            starget_register_label: 0,
+            ftarget_register_start_bit: 6,
+            starget_register_start_bit: 0,
+            source_register_label: 0,
+            source_register_start_bit: 16
+        }
+    }
+
+    fn setFTargetRegister(&mut self, first_target_register: String) -> Result<(), NotAValidRegisterError> {
+        match general_register.get(&first_target_register) {
+            None => return Err(NotAValidRegisterError{inst: self.inst_name, register: first_target_register}),
+            Some(v) => self.ftarget_register_label = (*v as u32) << self.ftarget_register_start_bit
+        };
+
+        Ok(())
+    }
+
+    fn setSTargetRegister(&mut self, second_target_register: String) -> Result<(), NotAValidRegisterError> {
+        match general_register.get(&second_target_register) {
+            None => return Err(NotAValidRegisterError{inst: self.inst_name, register: second_target_register}),
+            Some(v) => self.starget_register_label = (*v as u32) << self.starget_register_start_bit
+        };
+
+        Ok(())
+    }
+
+    fn setSourceRegister(&mut self, source_register: String) -> Result<(), NotAValidRegisterError> {
+        match all_register.get(&source_register) {
+            None => return Err(NotAValidRegisterError{inst: self.inst_name, register: source_register}),
+            Some(v) => self.source_register_label = (*v as u32) << self.source_register_start_bit
+        };
+
+        Ok(())
+    }
+
+    pub fn generateCode(&mut self, line_num: usize, ftarget_register: String, starget_register: String, source_register: String) -> Result<u32, String>{
+        /// Considering the efficiency of the compiler, here is a method that consumes more memory and improves compilation speed.
+        /// Each instruction is processed by a coroutine, and at the same time, two memory spaces are opened for saving the processing results,
+        /// one is normal and the other is abnormal, and the space is consistent with the number of instructions in the compiled file.
+
+        let mut error_infos = String::new();
+        let mut error = false;
+
+        match self.setFTargetRegister(ftarget_register) {
+            Ok(_) => (),
+            Err(e) => {
+                error = true;
+                error_infos += &format!("Line: {} - {}\n", line_num, e)
+            }
+        };
+
+        match self.setSTargetRegister(starget_register) {
+            Ok(_) => (),
+            Err(e) => {
+                error = true;
+                error_infos += &format!("Line: {} - {}\n", line_num, e)
+            }
+        };
+
+        match self.setSourceRegister(source_register) {
+            Ok(_) => (),
+            Err(e) => {
+                error = true;
+                error_infos += &format!("Line: {} - {}\n", line_num, e)
+            }
+        }
+
+        if error {
+            return Err(error_infos);
+        } else {
+            match self.argsToBinaryCode() {
+                Ok(v) => return Ok(v),
+                Err(_) => {
+                    error_infos += &format!("Line: {} - Binary opcode generation error, info: opcode: {:320b}, ft_r: {:320b}, st_r: {:320b}, s_r: {:320b}\n", line_num, self.op_code, self.ftarget_register_label, self.starget_register_label, self.source_register_label);
+                    return Err(error_infos);
+                }
+            }
+        }
+    }
+
+    fn argsToBinaryCode(&self) -> Result<u32, ()> {
+        /// A easy way to check
+        let a = self.op_code + self.ftarget_register_label + self.starget_register_label + self.source_register_label;
+        let b = self.op_code | self.ftarget_register_label | self.starget_register_label | self.source_register_label;
+        if a == b {
+            return Ok(a);
+        } else {
+            return Err(());
+        }
+    }
+}
+
+pub struct MOVE {
+    inst_type: String,
+    inst_name: String,
+    op_code: u32,
+    target_register_label: u32,
+    target_register_start_bit: u8,
+    source_register_label: u32,
+    source_register_start_bit: u8
+}
+
+impl MOVE {
+    pub fn new(inst_type: String, inst_name: String, op_code: u16) -> MOVE {
+        MOVE {
+            inst_type,
+            inst_name,
+            op_code: (op_code as u32) << 22,
+            target_register_label: 0,
+            target_register_start_bit: 16,
+            source_register_label: 0,
+            source_register_start_bit: 0
+        }
+    }
+
+    fn setTargetRegister(&mut self, target_register: String) -> Result<(), NotAValidRegisterError> {
+        match general_register.get(&target_register) {
+            None => return Err(NotAValidRegisterError{inst: self.inst_name, register: target_register}),
+            Some(v) => self.target_register_label = (*v as u32) << self.target_register_start_bit
+        };
+
+        Ok(())
+    }
+
+    fn setSourceRegister(&mut self, source_register: String) -> Result<(), NotAValidRegisterError> {
+        match all_register.get(&source_register) {
+            None => return Err(NotAValidRegisterError{inst: self.inst_name, register: source_register}),
+            Some(v) => self.source_register_label = (*v as u32) << self.source_register_start_bit
+        };
+
+        Ok(())
+    }
+
+    pub fn generateCode(&mut self, line_num: usize, target_register: String, source_register: String) -> Result<u32, String>{
+        /// Considering the efficiency of the compiler, here is a method that consumes more memory and improves compilation speed.
+        /// Each instruction is processed by a coroutine, and at the same time, two memory spaces are opened for saving the processing results,
+        /// one is normal and the other is abnormal, and the space is consistent with the number of instructions in the compiled file.
+
+        let mut error_infos = String::new();
+        let mut error = false;
+
+        match self.setTargetRegister(target_register) {
+            Ok(_) => (),
+            Err(e) => {
+                error = true;
+                error_infos += &format!("Line: {} - {}\n", line_num, e)
+            }
+        };
+
+        match self.setSourceRegister(source_register) {
+            Ok(_) => (),
+            Err(e) => {
+                error = true;
+                error_infos += &format!("Line: {} - {}\n", line_num, e)
+            }
+        }
+
+        if error {
+            return Err(error_infos);
+        } else {
+            match self.argsToBinaryCode() {
+                Ok(v) => return Ok(v),
+                Err(_) => {
+                    error_infos += &format!("Line: {} - Binary opcode generation error, info: opcode: {:320b}, t_r: {:320b}, s_r: {:320b}\n", line_num, self.op_code, self.target_register_label, self.source_register_label);
+                    return Err(error_infos);
+                }
+            }
+        }
+    }
+
+    fn argsToBinaryCode(&self) -> Result<u32, ()> {
+        /// A easy way to check
+        let a = self.op_code + self.target_register_label + self.source_register_label;
+        let b = self.op_code | self.target_register_label | self.source_register_label;
         if a == b {
             return Ok(a);
         } else {
