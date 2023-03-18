@@ -143,76 +143,15 @@ impl VAR {
     }
 
     fn calcData(&self) -> Result<(u32, u8), UnExceptedErrors> {
-        // TODO: how to represent negative numbers
+        // TODO: Check the base, positive and negative of the number,
+        // judge whether it is compliant, cause overflow, need to find a more concise and elegant solution
         match self.data_type.as_str() {
-            "byte" | "ubyte" => {
-                match self.Int() {
-                    Ok(v) => {
-                        if v > u8::MAX as u32 {
-                            return Err(UnExceptedErrors::VOOERE(ValueOutOfExpressionRangeError{value: self.value, v_type: String::from("byte or ubyte")}));
-                        } else {
-                            return Ok((v, 1));
-                        }
-                    },
-                    Err(e) => {
-                        return Err(UnExceptedErrors::PIE(e));
-                    }
-                }
+            "byte" => {
             },
-            "word" | "uword" => {
-                match self.Int() {
-                    Ok(v) => {
-                        if v > u16::MAX as u32 {
-                            return Err(UnExceptedErrors::VOOERE(ValueOutOfExpressionRangeError{value: self.value, v_type: String::from("word or uword")}));
-                        } else {
-                            return Ok((v, 1));
-                        }
-                    },
-                    Err(e) => {
-                        return Err(UnExceptedErrors::PIE(e));
-                    }
-                }
+            "word" => {
             },
-            "dword" | "udword" => {
-                match self.Int() {
-                    Ok(v) => {
-                        if v > u8::MAX as u32 {
-                            return Err(UnExceptedErrors::VOOERE(ValueOutOfExpressionRangeError{value: self.value, v_type: String::from("byte")}));
-                        } else {
-                            return Ok((v, 1));
-                        }
-                    },
-                    Err(e) => {
-                        return Err(UnExceptedErrors::PIE(e));
-                    }
-                }
-            },
-            _ => {
-                match self.Int() {
-                    Ok(v) => {
-                        if v > u8::MAX as u32 {
-                            return Err(UnExceptedErrors::VOOERE(ValueOutOfExpressionRangeError{value: self.value, v_type: String::from("byte")}));
-                        } else {
-                            return Ok((v, 1));
-                        }
-                    },
-                    Err(e) => {
-                        return Err(UnExceptedErrors::PIE(e));
-                    }
-                }
-            },
-        }
-    }
-
-    fn Int(&self) -> Result<u32, ParseIntError> {
-        if self.value.starts_with("hex") {
-            return u32::from_str_radix(self.value.trim_start_matches("hex"), 16);
-        } else if self.value.starts_with("oct") {
-            return u32::from_str_radix(self.value.trim_start_matches("oct"), 8);
-        } else if self.value.starts_with("bin") {
-            return u32::from_str_radix(self.value.trim_start_matches("bin"), 2);
-        } else {
-            return u32::from_str_radix(self.value.as_str(), 10);
+            "dword" | _ => {
+            }
         }
     }
 }
