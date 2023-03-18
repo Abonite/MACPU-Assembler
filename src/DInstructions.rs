@@ -147,11 +147,21 @@ impl VAR {
         // judge whether it is compliant, cause overflow, need to find a more concise and elegant solution
         match self.data_type.as_str() {
             "byte" => {
+                u32::from_str_radix(src, radix)
             },
             "word" => {
             },
             "dword" | _ => {
             }
+        }
+    }
+
+    fn toInt<T>(&self, int_string: String, radix: usize, is_pos: bool) -> Result<T, ParseIntError>
+        where T: u32 + u16 + u8
+    {
+        // TODO: ↑ How to use this thing up there??????
+        if is_pos {
+            return T::from_str_radix(int_string, radix);
         }
     }
 }
