@@ -49,6 +49,8 @@ enum Setting_item {
     I(u32)
 }
 
+// Requires no spaces before and after all values
+
 pub struct SET {
     setting_item: String,
     value: String,
@@ -137,31 +139,163 @@ impl VAR {
         }
     }
 
-    pub fn generateData(&self) -> Result<(u32, u8), String> {
+    pub fn generateData(&self, line_num: usize) -> Result<Vec<u8>, String> {
         let mut error_infos = String::new();
         let mut error = false;
-    }
 
-    fn calcData(&self) -> Result<(u32, u8), UnExceptedErrors> {
-        // TODO: Check the base, positive and negative of the number,
-        // judge whether it is compliant, cause overflow, need to find a more concise and elegant solution
-        match self.data_type.as_str() {
-            "byte" => {
-                u32::from_str_radix(src, radix)
-            },
-            "word" => {
-            },
-            "dword" | _ => {
+        let r = match self.calcData() {
+            Ok(v) => v,
+            Err(e) => {
+                error = true;
+                match e {
+                    UnExceptedErrors::JS(ev) => error_infos += &format!("Line: {} - {}", line_num, ev),
+                    UnExceptedErrors::PIE(ev) => error_infos += &format!("Line: {} - {}", line_num, ev),
+                    UnExceptedErrors::USE(ev) => error_infos += &format!("Line: {} - {}", line_num, ev),
+                    UnExceptedErrors::VOOERE(ev) => error_infos += &format!("Line: {} - {}", line_num, ev)
+                }
+                vec![]
             }
+        };
+
+        if error {
+            return Err(error_infos);
+        } else {
+            return Ok(r)
         }
     }
 
-    fn toInt<T>(&self, int_string: String, radix: usize, is_pos: bool) -> Result<T, ParseIntError>
-        where T: u32 + u16 + u8
-    {
-        // TODO: ↑ How to use this thing up there??????
-        if is_pos {
-            return T::from_str_radix(int_string, radix);
+    fn calcData(&self) -> Result<Vec<u8>, UnExceptedErrors> {
+        let mut radix = 10;
+        let mut src_str = "";
+        if self.value.starts_with("hex") {
+            radix = 16;
+            src_str = self.value.trim_start_matches("hex");
+        } else if self.value.starts_with("oct") {
+            radix = 8;
+            src_str = self.value.trim_start_matches("oct");
+        } else if self.value.starts_with("bin") {
+            radix = 2;
+            src_str = self.value.trim_start_matches("bin");
+        } else {
+            radix = 10;
+            src_str = self.value.as_str();
+        }
+
+        let max_value = match self.data_type.as_str() {
+            "byte" => u8::MAX as u32,
+            "word" => u16::MAX as u32,
+            "dword" | _ => u32::MAX as u32
+        };
+
+        match u32::from_str_radix(src_str, radix) {
+            Ok(v) => {
+                if v > max_value {
+                    ???
+                }
+            }
+            Err(e) => return Err(UnExceptedErrors::PIE(e))
+        }
+    }
+}
+
+struct STR {
+    name: String,
+    value: String
+}
+
+impl STR {
+    pub fn new(name: String, value: String) -> STR {
+        STR {
+            name,
+            // with out """
+            value
+        }
+    }
+
+    pub fn generateData(&self, line_num: usize) -> Vec<u8> {
+        return self.value.into_bytes();
+    }
+}
+
+struct ARR {
+    name: String,
+    data_type: String,
+    value: String
+}
+
+impl ARR {
+    pub fn new(name: String, data_type: String, value: String) -> ARR {
+        ARR {
+            name,
+            data_type,
+            value
+        }
+    }
+
+    pub fn generateData(&self) {
+        let mut error = false;
+        let mut error_infos = String::new();
+
+        let r = self.value.chars().map(|x| match self.toInt(x.trim()) {
+            Ok(v) => v,
+            Err(e) => 
+        });
+    }
+
+    fn toInt(&self, v: &str) -> Result<U, UnExceptedErrors> {
+        let mut radix = 10;
+        let mut src_str = "";
+        if v.starts_with("hex") {
+            radix = 16;
+            src_str = v.trim_start_matches("hex");
+        } else if v.starts_with("oct") {
+            radix = 8;
+            src_str = v.trim_start_matches("oct");
+        } else if v.starts_with("bin") {
+            radix = 2;
+            src_str = v.trim_start_matches("bin");
+        } else {
+            radix = 10;
+            src_str = v;
+        }
+
+        match self.data_type.as_str() {
+            "byte" => {
+                match u32::from_str_radix(src_str, radix) {
+                    Ok(v) => {
+                        if v > u8::MAX as u32 {
+                            return Err(UnExceptedErrors::VOOERE(ValueOutOfExpressionRangeError { value: self.value, v_type: String::from("byte") }));
+                        } else {
+                            return Ok(U::b(v as u8))
+                        }
+                    },
+                    Err(e) => return Err(UnExceptedErrors::PIE(e))
+                };
+            },
+            "word" => {
+                match u32::from_str_radix(src_str, radix) {
+                    Ok(v) => {
+                        if v > u16::MAX as u32 {
+                            return Err(UnExceptedErrors::VOOERE(ValueOutOfExpressionRangeError { value: self.value, v_type: String::from("word") }));
+                        } else {
+                            return Ok(U::w(v as u16))
+                        }
+                    },
+                    Err(e) => return Err(UnExceptedErrors::PIE(e))
+                };
+            },
+            "dword" | _ => {
+                match u32::from_str_radix(src_str, radix) {
+                    Ok(v) => {
+                        if v > u32::MAX {
+                            return Err(UnExceptedErrors::VOOERE(ValueOutOfExpressionRangeError { value: self.value, v_type: String::from("dword") }));
+                        } else {
+                            return Ok(U::d(v))
+                        }
+                    },
+                    Err(e) => return Err(UnExceptedErrors::PIE(e))
+                };
+            }
         }
     }
 }
