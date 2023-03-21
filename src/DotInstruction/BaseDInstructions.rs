@@ -148,10 +148,10 @@ impl VAR {
             Err(e) => {
                 error = true;
                 match e {
-                    UnExceptedErrors::JS(ev) => error_infos += &format!("Line: {} - {}", line_num, ev),
-                    UnExceptedErrors::PIE(ev) => error_infos += &format!("Line: {} - {}", line_num, ev),
-                    UnExceptedErrors::USE(ev) => error_infos += &format!("Line: {} - {}", line_num, ev),
-                    UnExceptedErrors::VOOERE(ev) => error_infos += &format!("Line: {} - {}", line_num, ev)
+                    UnExceptedErrors::JS(ev) => error_infos += &format!("Line: {} - {}\n", line_num, ev),
+                    UnExceptedErrors::PIE(ev) => error_infos += &format!("Line: {} - {}\n", line_num, ev),
+                    UnExceptedErrors::USE(ev) => error_infos += &format!("Line: {} - {}\n", line_num, ev),
+                    UnExceptedErrors::VOOERE(ev) => error_infos += &format!("Line: {} - {}\n", line_num, ev)
                 }
                 vec![]
             }
@@ -181,16 +181,26 @@ impl VAR {
             src_str = self.value.as_str();
         }
 
-        let max_value = match self.data_type.as_str() {
+        let data_type = self.data_type.as_str();
+
+        let max_value = match data_type {
             "byte" => u8::MAX as u32,
             "word" => u16::MAX as u32,
-            "dword" | _ => u32::MAX as u32
+            "dword" | "" => u32::MAX as u32,
+            _ => return Err(UnExceptedErrors::USE(UnparseableStringError { inst: String::from("VAR"), value: self.data_type }))
         };
 
         match u32::from_str_radix(src_str, radix) {
             Ok(v) => {
                 if v > max_value {
-                    ???
+                    return Err(UnExceptedErrors::VOOERE(ValueOutOfExpressionRangeError { value: self.value, v_type:  self.data_type}));
+                } else {
+                    match data_type {
+                        "byte" => return Ok(vec![v as u8]),
+                        // little-endian
+                        "word" => return Ok(vec![(v & 0xFF) as u8, ((v & 0xFF00) >> 8) as u8]),
+                        "dword" | "" => return Ok(vec![(v & 0xFF) as u8,  ((v & 0xFF00) >> 8) as u8, ((v & 0xFF_0000) >> 16) as u8, ((v & 0xFF00_0000) >> 24) as u8])
+                    }
                 }
             }
             Err(e) => return Err(UnExceptedErrors::PIE(e))
@@ -198,7 +208,7 @@ impl VAR {
     }
 }
 
-struct STR {
+pub struct STR {
     name: String,
     value: String
 }
@@ -217,7 +227,7 @@ impl STR {
     }
 }
 
-struct ARR {
+pub struct ARR {
     name: String,
     data_type: String,
     value: String
@@ -232,70 +242,79 @@ impl ARR {
         }
     }
 
-    pub fn generateData(&self) {
+    pub fn generateData(&self, line_num: usize) -> Result<Vec<u8>, String> {
         let mut error = false;
         let mut error_infos = String::new();
 
-        let r = self.value.chars().map(|x| match self.toInt(x.trim()) {
-            Ok(v) => v,
-            Err(e) => 
-        });
-    }
+        let mut r: Vec<u8> = vec![];
 
-    fn toInt(&self, v: &str) -> Result<U, UnExceptedErrors> {
-        let mut radix = 10;
-        let mut src_str = "";
-        if v.starts_with("hex") {
-            radix = 16;
-            src_str = v.trim_start_matches("hex");
-        } else if v.starts_with("oct") {
-            radix = 8;
-            src_str = v.trim_start_matches("oct");
-        } else if v.starts_with("bin") {
-            radix = 2;
-            src_str = v.trim_start_matches("bin");
-        } else {
-            radix = 10;
-            src_str = v;
-        }
-
-        match self.data_type.as_str() {
-            "byte" => {
-                match u32::from_str_radix(src_str, radix) {
-                    Ok(v) => {
-                        if v > u8::MAX as u32 {
-                            return Err(UnExceptedErrors::VOOERE(ValueOutOfExpressionRangeError { value: self.value, v_type: String::from("byte") }));
-                        } else {
-                            return Ok(U::b(v as u8))
-                        }
-                    },
-                    Err(e) => return Err(UnExceptedErrors::PIE(e))
-                };
-            },
-            "word" => {
-                match u32::from_str_radix(src_str, radix) {
-                    Ok(v) => {
-                        if v > u16::MAX as u32 {
-                            return Err(UnExceptedErrors::VOOERE(ValueOutOfExpressionRangeError { value: self.value, v_type: String::from("word") }));
-                        } else {
-                            return Ok(U::w(v as u16))
-                        }
-                    },
-                    Err(e) => return Err(UnExceptedErrors::PIE(e))
-                };
-            },
-            "dword" | _ => {
-                match u32::from_str_radix(src_str, radix) {
-                    Ok(v) => {
-                        if v > u32::MAX {
-                            return Err(UnExceptedErrors::VOOERE(ValueOutOfExpressionRangeError { value: self.value, v_type: String::from("dword") }));
-                        } else {
-                            return Ok(U::d(v))
-                        }
-                    },
-                    Err(e) => return Err(UnExceptedErrors::PIE(e))
-                };
+        for i in self.value.split(",") {
+            match self.toInt(i.trim()) {
+                Ok(v) => r.append(&mut v),
+                Err(e) => {
+                    error = true;
+                    match e {
+                        UnExceptedErrors::JS(ev) => error_infos += &format!("Line: {} - {}\n", line_num, ev),
+                        UnExceptedErrors::PIE(ev) => error_infos += &format!("Line: {} - {}\n", line_num, ev),
+                        UnExceptedErrors::USE(ev) => error_infos += &format!("Line: {} - {}\n", line_num, ev),
+                        UnExceptedErrors::VOOERE(ev) => error_infos += &format!("Line: {} - {}\n", line_num, ev)
+                    }
+                }
             }
         }
+
+        if error {
+            return Err(error_infos);
+        } else {
+            return Ok(r);
+        }
     }
+
+    fn toInt(&self, v: &str) -> Result<Vec<u8>, UnExceptedErrors> {
+        let mut radix = 10;
+        let mut src_str = "";
+        if self.value.starts_with("hex") {
+            radix = 16;
+            src_str = self.value.trim_start_matches("hex");
+        } else if self.value.starts_with("oct") {
+            radix = 8;
+            src_str = self.value.trim_start_matches("oct");
+        } else if self.value.starts_with("bin") {
+            radix = 2;
+            src_str = self.value.trim_start_matches("bin");
+        } else {
+            radix = 10;
+            src_str = self.value.as_str();
+        }
+
+        let data_type = self.data_type.as_str();
+
+        let max_value = match data_type {
+            "byte" => u8::MAX as u32,
+            "word" => u16::MAX as u32,
+            "dword" | "" => u32::MAX as u32,
+            _ => return Err(UnExceptedErrors::USE(UnparseableStringError { inst: String::from("VAR"), value: self.data_type }))
+        };
+
+        match u32::from_str_radix(src_str, radix) {
+            Ok(v) => {
+                if v > max_value {
+                    return Err(UnExceptedErrors::VOOERE(ValueOutOfExpressionRangeError { value: self.value, v_type:  self.data_type}));
+                } else {
+                    match data_type {
+                        "byte" => return Ok(vec![v as u8]),
+                        // little-endian
+                        "word" => return Ok(vec![(v & 0xFF) as u8, ((v & 0xFF00) >> 8) as u8]),
+                        "dword" | "" => return Ok(vec![(v & 0xFF) as u8,  ((v & 0xFF00) >> 8) as u8, ((v & 0xFF_0000) >> 16) as u8, ((v & 0xFF00_0000) >> 24) as u8])
+                    }
+                }
+            }
+            Err(e) => return Err(UnExceptedErrors::PIE(e))
+        }
+    }
+}
+
+pub struct DEF {
+    name: String,
+    value: String
 }
