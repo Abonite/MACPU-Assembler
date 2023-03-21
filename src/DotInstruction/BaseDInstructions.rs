@@ -38,13 +38,13 @@ enum UnExceptedErrors {
 }
 
 // Settings table
-const SETTINGS: HashMap<String, Setting_item> = HashMap::from_iter(vec![
+pub const SETTINGS: HashMap<String, Setting_item> = HashMap::from_iter(vec![
     (String::from("S_CODE_SA"), Setting_item::I(0x0)),
     (String::from("S_DATA_SA"), Setting_item::I(0x2000)),
     (String::from("S_STACK_SA"), Setting_item::I(0x3000))
 ]);
 
-enum Setting_item {
+pub enum Setting_item {
     B(bool),
     I(u32)
 }
