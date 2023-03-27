@@ -68,7 +68,10 @@ impl DIProcessor {
 
     fn start(&self) -> Result<DI, String> {
         if self.line.starts_with(".SET") {
-            self.pset(self.line.trim_start_matches(".SET"));
+            match self.pset(self.line.trim_start_matches(".SET")) {
+                Ok(v) => return Ok(DI::SE(v)),
+                Err(e) => return Err(e)
+            };
         } else if self.line.starts_with(".VAR") {
 
         } else if self.line.starts_with(".STR") {
@@ -82,18 +85,27 @@ impl DIProcessor {
         }
     }
 
-    fn pset(&self, args: &str) {
+    fn pset(&self, args: &str) -> Result<SET, String> {
         let mut farg = String::new();
         let mut sarg = String::new();
         let mut nvs = false;
 
-        const FIRST_ARG: u8 = 0;
-        const BLANK: u8 = 1;
-        const SECOND_ARG: u8 = 2;
+        const FIRST_CHAR: u8 = 0;
+        const FIRST_ARG: u8 = 1;
+        const BLANK: u8 = 2;
+        const SECOND_ARG: u8 = 3;
 
-        let mut curr_state = FIRST_ARG;
+        let mut curr_state = FIRST_CHAR;
         for c in args.chars() {
             match curr_state {
+                FIRST_CHAR => {
+                    if !c.is_ascii_digit() {
+                        farg.push(c);
+                        curr_state = FIRST_ARG;
+                    } else {
+                        return Err(format!("The first character cannot be a number"));
+                    }
+                },
                 FIRST_ARG => {
                     if c != '\t' || c != ' ' {
                         farg.push(c);
@@ -105,15 +117,74 @@ impl DIProcessor {
                     if c == '\n' {
                         nvs = true;
                         break;
-                    } else if c.is_ascii_alphabetic() && c != ' ' && c != '\t' {
+                    } else if c != '\n' && c != ' ' && c != '\t' {
                         curr_state = SECOND_ARG;
-                    } else if c == ' ' && c == '\t' {
-                        ;
+                    } else if c != '\n' && (c == ' ' || c == '\t') {
                     } else {
-
+                        return Err(format!("Unusual string"));
                     }
-                }
+                },
+                SECOND_ARG => {
+                    if c != '\n' {
+                        sarg.push(c);
+                    } else {
+                        break;
+                    }
+                },
+                _ => return Err(format!("State machine exception"))
             }
         }
+        return Ok(SET::new(farg, sarg, nvs));
+    }
+
+    fn pvar(&self, args: &str) -> Result<VAR, String> {
+        let mut farg = String::new();
+        let mut sarg = String::new();
+
+        const FIRST_CHAR: u8 = 0;
+        const FIRST_ARG: u8 = 1;
+        const BLANK: u8 = 2;
+        const SECOND_ARG: u8 = 3;
+
+        let mut curr_state = FIRST_CHAR;
+        for c in args.chars() {
+            match curr_state {
+                FIRST_CHAR => {
+                    if !c.is_ascii_digit() {
+                        farg.push(c);
+                        curr_state = FIRST_ARG;
+                    } else {
+                        return Err(format!("The first character cannot be a number"));
+                    }
+                },
+                FIRST_ARG => {
+                    if c != '\t' || c != ' ' {
+                        farg.push(c);
+                    } else {
+                        curr_state = BLANK;
+                    }
+                },
+                BLANK => {
+                    if c == '\n' {
+                        nvs = true;
+                        break;
+                    } else if c != '\n' && c != ' ' && c != '\t' {
+                        curr_state = SECOND_ARG;
+                    } else if c != '\n' && (c == ' ' || c == '\t') {
+                    } else {
+                        return Err(format!("Unusual string"));
+                    }
+                },
+                SECOND_ARG => {
+                    if c != '\n' {
+                        sarg.push(c);
+                    } else {
+                        break;
+                    }
+                },
+                _ => return Err(format!("State machine exception"))
+            }
+        }
+        return Ok(VAR::new());
     }
 }
