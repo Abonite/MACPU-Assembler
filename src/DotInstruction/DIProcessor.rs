@@ -166,7 +166,6 @@ impl DIProcessor {
                 },
                 BLANK => {
                     if c == '\n' {
-                        nvs = true;
                         break;
                     } else if c != '\n' && c != ' ' && c != '\t' {
                         curr_state = SECOND_ARG;
