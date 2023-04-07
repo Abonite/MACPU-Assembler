@@ -275,7 +275,7 @@ impl DIProcessor {
     fn parr(&self, args: &str) -> Result<ARR, String> {
         let mut farg = String::new();
         let mut sarg = String::new();
-        let mut targ = vec![];
+        let mut arr_item = vec![];
 
         const FIRST_CHAR: u8 = 0;
         const FIRST_ARG: u8 = 1;
