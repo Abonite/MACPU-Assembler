@@ -57,6 +57,7 @@ impl DotInstrctionsProcessor {
 
         for (line_num, line) in self.file.clone() {
             let dip = DIProcessor::new(line_num, line);
+            // oh no
             dip_handles.push(tokio::spawn(dip.start()))
         }
 
