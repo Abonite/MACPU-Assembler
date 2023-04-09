@@ -125,7 +125,7 @@ impl SET {
 }
 
 pub struct VAR {
-    name: String,
+    pub name: String,
     data_type: String,
     value: String
 }
@@ -209,7 +209,7 @@ impl VAR {
 }
 
 pub struct STR {
-    name: String,
+    pub name: String,
     value: String
 }
 
@@ -228,7 +228,7 @@ impl STR {
 }
 
 pub struct ARR {
-    name: String,
+    pub name: String,
     data_type: String,
     value: String
 }

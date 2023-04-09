@@ -25,7 +25,8 @@ struct Args {
     compile_mode: String,
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let args = Args::parse();
 
     let data = SourceFileSpliter(&args.input_file);
