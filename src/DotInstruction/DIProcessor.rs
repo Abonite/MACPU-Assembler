@@ -21,6 +21,7 @@ enum DI {
 pub struct DotInstrctionsProcessor {
     file: Vec<(usize, String)>,
     settings_table: HashMap<String, Setting_item>,
+    define_table: HashMap<String, String>,
     datas_table: HashMap<String, usize>,
     datas: Vec<u8>
 }
@@ -30,6 +31,7 @@ impl DotInstrctionsProcessor {
         DotInstrctionsProcessor {
             file,
             settings_table: SETTINGS,
+            define_table: HashMap::new(),
             datas_table: HashMap::new(),
             datas: vec![]
         }
@@ -51,7 +53,7 @@ impl DotInstrctionsProcessor {
         return i;
     }
 
-    pub async fn process(&mut self) {
+    pub async fn process(&mut self) -> Result<(), String> {
         let mut dip_handles = vec![];
         let mut errors = String::new();
 
@@ -69,26 +71,41 @@ impl DotInstrctionsProcessor {
                     DI::AR(d) => {
                         self.datas_table.insert(d.name.clone(), self.datas.len());
                         match d.generateData(l) {
-                            Ok(u) => self.datas.append(&mut u),
+                            Ok(u) => self.datas.append(&mut u.clone()),
                             Err(e) => errors += &e
                         }
                     },
-                    DI::DE(d) => {},
-                    DI::SE(d) => {},
+                    DI::DE(d) => {
+                        match self.define_table.get(&d.name) {
+                            Some(_) => errors += &format!("Line: {} - \"{}\" has already been defined\n", l, d.name),
+                            None => {self.define_table.insert(d.name, d.value);}
+                        };
+                    },
+                    DI::SE(d) => {
+                        match d.setTable(l) {
+                            Ok(_) => (),
+                            Err(e) => errors += &e
+                        }
+                    },
                     DI::ST(d) => {
-                        self.datas_table.insert(d.name, self.datas.len());
+                        self.datas_table.insert(d.name.clone(), self.datas.len());
                         self.datas.append(&mut d.generateData(l));
                     },
                     DI::VA(d) => {
-                        self.datas_table.insert(d.name, self.datas.len());
+                        self.datas_table.insert(d.name.clone(), self.datas.len());
                         match d.generateData(l) {
-                            Ok(u) => self.datas.append(&mut u),
+                            Ok(u) => self.datas.append(&mut u.clone()),
                             Err(e) => errors += &e
                         }
                     }
                 },
-                Err(e) => {}
+                Err(e) => errors += &e
             }
+        }
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
         }
     }
 }
@@ -106,31 +123,31 @@ impl DIProcessor {
         }
     }
 
-    async fn start(&self) -> Result<(usize, DI), String> {
+    async fn start(self) -> Result<(usize, DI), String> {
         if self.line.starts_with(".SET") {
             match self.pset(self.line.trim_start_matches(".SET")) {
                 Ok(v) => return Ok((self.line_num, DI::SE(v))),
-                Err(e) => return Err(format!("Line: {} - \"{}\"", self.line_num, e))
+                Err(e) => return Err(format!("Line: {} - \"{}\"\n", self.line_num, e))
             };
         } else if self.line.starts_with(".VAR") {
             match self.pvar(self.line.trim_start_matches(".VAR")) {
                 Ok(v) => return Ok((self.line_num, DI::VA(v))),
-                Err(e) => return Err(format!("Line: {} - \"{}\"", self.line_num, e))
+                Err(e) => return Err(format!("Line: {} - \"{}\"\n", self.line_num, e))
             }
         } else if self.line.starts_with(".STR") {
             match self.pstr(self.line.trim_start_matches(".STR")) {
                 Ok(v) => return Ok((self.line_num, DI::ST(v))),
-                Err(e) => return Err(format!("Line: {} - \"{}\"", self.line_num, e))
+                Err(e) => return Err(format!("Line: {} - \"{}\"\n", self.line_num, e))
             }
         } else if self.line.starts_with(".ARR") {
             match self.parr(self.line.trim_start_matches(".ARR")) {
                 Ok(v) => return Ok((self.line_num, DI::AR(v))),
-                Err(e) => return Err(format!("Line: {} - \"{}\"", self.line_num, e))
+                Err(e) => return Err(format!("Line: {} - \"{}\"\n", self.line_num, e))
             }
         } else if self.line.starts_with(".DEF") {
             match self.pdef(self.line.trim_start_matches(".DEF")) {
                 Ok(v) => return Ok((self.line_num, DI::DE(v))),
-                Err(e) => return Err(format!("Line: {} - \"{}\"", self.line_num, e))
+                Err(e) => return Err(format!("Line: {} - \"{}\"\n", self.line_num, e))
             }
         } else {
             return Err(format!("Line: {} - \"{}\" not a legal preprocessing command", self.line_num, self.line));

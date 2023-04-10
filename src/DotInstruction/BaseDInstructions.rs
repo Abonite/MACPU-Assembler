@@ -315,6 +315,6 @@ impl ARR {
 }
 
 pub struct DEF {
-    name: String,
-    value: String
+    pub name: String,
+    pub value: String
 }
