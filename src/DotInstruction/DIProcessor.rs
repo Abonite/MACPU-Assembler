@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 use tokio;
 use super::BaseDInstructions::{
-    Setting_item,
-    SETTINGS,
     SET,
     VAR,
     STR,
@@ -20,7 +18,6 @@ enum DI {
 
 pub struct DotInstrctionsProcessor {
     file: Vec<(usize, String)>,
-    settings_table: HashMap<String, Setting_item>,
     define_table: HashMap<String, String>,
     datas_table: HashMap<String, usize>,
     datas: Vec<u8>
@@ -30,7 +27,6 @@ impl DotInstrctionsProcessor {
     pub fn new(file: Vec<(usize, String)>) -> DotInstrctionsProcessor {
         DotInstrctionsProcessor {
             file,
-            settings_table: SETTINGS,
             define_table: HashMap::new(),
             datas_table: HashMap::new(),
             datas: vec![]
