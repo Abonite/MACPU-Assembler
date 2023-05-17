@@ -953,7 +953,7 @@ impl JUMP {
 
     fn argsToBinaryCode(&self) -> Result<u32, ()> {
         /// A easy way to check
-        let a = self.op_code + self.source_register_label + self.starget_register_label + self.ftarget_register_label + self.immediate_number;
+        //let a = self.op_code + self.source_register_label + self.starget_register_label + self.ftarget_register_label + self.immediate_number;
         let b = self.op_code | self.source_register_label | self.starget_register_label | self.ftarget_register_label + self.immediate_number;
         if a == b {
             return Ok(a);
