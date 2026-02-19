@@ -31,6 +31,10 @@ async fn main() {
 
     let data = SourceFileSpliter(&args.input_file);
 
+    let dip = DotInstruction::DIProcessor::DotInstrctionsProcessor::new(data);
+    let data = dip.extract();
+    dip.process();
+
     let (mut dip, data) = DotInstrctionsProcessor::new(data);
     if !dip.lexical_check() {
         panic!("[ERROR] Due to early errors, compiler is stoped");
