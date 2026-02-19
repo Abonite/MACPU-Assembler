@@ -1,11 +1,9 @@
 extern crate clap;
 extern crate tokio;
 
-mod SFSpliter;
-mod Instruction;
-mod DotInstruction;
+mod FileParser;
+mod InstructionParser;
 
-use SFSpliter::SourceFileSpliter;
 use clap::{Parser, command};
 
 #[derive(Parser, Debug)]
@@ -29,29 +27,5 @@ struct Args {
 async fn main() {
     let args = Args::parse();
 
-    let data = SourceFileSpliter(&args.input_file);
-
-    let dip = DotInstruction::DIProcessor::DotInstrctionsProcessor::new(data);
-    let data = dip.extract();
-    dip.process();
-
-    let (mut dip, data) = DotInstrctionsProcessor::new(data);
-    if !dip.lexical_check() {
-        panic!("[ERROR] Due to early errors, compiler is stoped");
-    }
-    if !dip.syntax_check() {
-        panic!("[ERROR] Due to early errors, complier is stoped");
-    }
-    if !dip.data_overflow_ckeck() {
-        panic!("[ERROR] Due to early errors, complier is stoped");
-    }
-
-    let (a, b, c, d) = dip.getinfo();
-    println!("[DEBUG]: set info - {:?}", a);
-    println!("[DEBUG]: data info - {:?}", b);
-    println!("[DEBUG]: define info - {:?}", c);
-    println!("[DEBUG]: data buffer - {:?}", d);
-
-    let mut a = InstructionProcessor::new(data);
-    a.syntax_check();
+    let asm_instructions = FileParser::pars_file(args.input_file);
 }
