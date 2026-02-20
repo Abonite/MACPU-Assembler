@@ -4,8 +4,8 @@ use std::collections::HashMap;
 
 
 pub struct Instr {
-    data: String,
-    address: u64
+    pub data: String,
+    pub address: u64
 }
 
 pub fn pars_file(file_path: String) -> (Vec<Instr>, HashMap<String, u64>) {
@@ -65,7 +65,7 @@ pub fn pars_file(file_path: String) -> (Vec<Instr>, HashMap<String, u64>) {
             }
         } else {
             instr.push(Instr { data: line, address: addr_counter});
-            addr_counter += 1;
+            addr_counter += 4;
         }
     }
 

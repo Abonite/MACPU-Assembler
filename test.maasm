@@ -1,6 +1,8 @@
 ; TEST
 start:
-    HALT
+    LOAD8   %a0, [0x10]
+    LOAD16  %a1, %a0
+    LOAD32  %a2, %a0, %a1
 
 .AT 0xFFFC
-    JMP start
+    STORE8  %a0, %a2
