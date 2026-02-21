@@ -5,4 +5,4 @@ start:
     LOAD32  %a2, %a0, %a1
 
 .AT 0xFFFC
-    STORE8  %a0, %a2
+    JMP start
