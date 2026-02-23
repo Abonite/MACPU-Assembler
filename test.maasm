@@ -1,8 +1,18 @@
-; TEST
+;A test programm
 start:
-    LOAD8   %a0, [0x10]
-    LOAD16  %a1, %a0
-    LOAD32  %a2, %a0, %a1
+    LOAD8   %a0, [1]
+    LOAD8   %a1, [1]
 
+    MOVE    %ads, %pc
+
+    ADD     %ar0, %a0, %a1
+    MOVE    %a0, %ar0
+    ADD     %ar0, %a0, %a1
+    MOVE    %a1, %ar0
+
+    JMP     %ads
+
+;because the end of this programm whil be set to address 0xFFFFFFFF 
+;so start target is not at orginal address(0)
 .AT 0xFFFC
-    JMP start
+    JMP [0x3F0000]

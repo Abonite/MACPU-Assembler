@@ -62,6 +62,30 @@ pub fn pars_instructions(instructions: Vec<Instr>, labels: HashMap<String, u64>)
                     panic!();
                 }
             };
+        } else if line.data.starts_with("MOVE") || line.data.starts_with("move") {
+            bin = match pars_move(line.data.trim_start_matches("MOVE").trim_start_matches("move").trim().split(',').map(|x| x.trim()).collect::<Vec<&str>>(), labels.clone()) {
+                Ok(c) => c,
+                Err(e) => {
+                    println!("{}", e);
+                    panic!();
+                }
+            };
+        } else if line.data.starts_with("ADD") || line.data.starts_with("add") {
+            bin = match pars_add(line.data.trim_start_matches("ADD").trim_start_matches("add").trim().split(',').map(|x| x.trim()).collect::<Vec<&str>>(), labels.clone()) {
+                Ok(c) => c,
+                Err(e) => {
+                    println!("{}", e);
+                    panic!();
+                }
+            };
+        } else if line.data.starts_with("SUB") || line.data.starts_with("sub") {
+            bin = match pars_sub(line.data.trim_start_matches("SUB").trim_start_matches("sub").trim().split(',').map(|x| x.trim()).collect::<Vec<&str>>(), labels.clone()) {
+                Ok(c) => c,
+                Err(e) => {
+                    println!("{}", e);
+                    panic!();
+                }
+            };
         } else if line.data.starts_with("JMP") || line.data.starts_with("jmp") {
             bin = match pars_jmp(line.data.trim_start_matches("JMP").trim_start_matches("jmp").trim().split(',').map(|x| x.trim()).collect::<Vec<&str>>(), labels.clone()) {
                 Ok(c) => c,
@@ -280,10 +304,17 @@ fn generate_register_ast(register_info: Vec<&str>, labels: HashMap<String, u64>)
                                 }
                             })
                         } else {
-                            if labels.contains_key(register_info[0]) {
-                                Source::IMM(labels[register_info[0]] as u32)
+                            if labels.contains_key(register_info[1]) {
+                                Source::IMM(labels[register_info[1]] as u32)
                             } else {
-                                return Err(String::from("Unknown argument."));
+                                let imme_number = register_info[1].trim_start_matches('[').trim_end_matches(']').trim();
+                                Source::IMM(match para_immediate_num(imme_number) {
+                                    Ok(v) => v,
+                                    Err(e) => {
+                                        println!("{}", e);
+                                        panic!();
+                                    }
+                                })
                             }
                         }
                     ),
@@ -815,7 +846,7 @@ fn pars_move(register_info: Vec<&str>, labels: HashMap<String, u64>) -> Result<u
                     let opcode: u32 = 0b0000_0010_01 << 22;
                     match rast.source_1 {
                         None => {
-                            match InstDiffTypePars::pars_tss(target_register, r, Register { name: String::from("ZERO"), label: 0 }, constraint) {
+                            match InstDiffTypePars::pars_ts(target_register, r, constraint) {
                                 Ok(v) => return Ok(opcode | v),
                                 Err(e) => return Err(e)
                             };
@@ -833,6 +864,125 @@ fn pars_move(register_info: Vec<&str>, labels: HashMap<String, u64>) -> Result<u
     }
 }
 
+fn pars_add(register_info: Vec<&str>, labels: HashMap<String, u64>) -> Result<u32, String> {
+    let rast = match generate_register_ast(register_info, labels) {
+        Ok(v) => v,
+        Err(e) => {
+            println!("{}", e);
+            panic!();
+        }
+    };
+
+    let target_register = match rast.target {
+        Some(r) => r,
+        None => {
+            return Err(String::from("No target register when use ADD."))
+        }
+    };
+
+    let constraint = Constraint {
+        target_invalid_reg: vec![String::from("PC"), String::from("ZERO")],
+        source_0_invalid_reg: vec![],
+        source_1_invalid_reg: vec![],
+        immediate_0_number_max: 0x3FF,
+        immediate_1_number_max: 0
+    };
+
+    match rast.source_0 {
+        Some(v) => {
+            match v {
+                Source::IMM(i) => {
+                    let opcode: u32 = 0b1000_0000_00 << 22;
+                    match rast.source_1 {
+                        None => {
+                            return Err(String::from("No enought argument when use ADD."));
+                        },
+                        Some(s) => {
+                            match InstDiffTypePars::pars_tsi(target_register, s, i, constraint) {
+                                Ok(v) => return Ok(opcode | v),
+                                Err(e) => return Err(e)
+                            };
+                        }
+                    }
+                },
+                Source::REG(r) => {
+                    let opcode: u32 = 0b1000_0000_01 << 22;
+                    match rast.source_1 {
+                        None => {
+                            return Err(String::from("No enought argument when use ADD."));
+                        },
+                        Some(s) => {
+                            match InstDiffTypePars::pars_tss(target_register, r, s, constraint) {
+                                Ok(v) => return Ok(opcode | v),
+                                Err(e) => return Err(e)
+                            };
+                        }
+                    }
+                }
+            }
+        },
+        None => {
+            return Err(String::from("No operation argument when use ADD."));
+        }
+    }
+}
+
+fn pars_sub(register_info: Vec<&str>, labels: HashMap<String, u64>) -> Result<u32, String> {
+    let rast = match generate_register_ast(register_info, labels) {
+        Ok(v) => v,
+        Err(e) => {
+            println!("{}", e);
+            panic!();
+        }
+    };
+
+    let target_register = match rast.target {
+        Some(r) => r,
+        None => {
+            return Err(String::from("No target register when use SUB."))
+        }
+    };
+
+    let constraint = Constraint {
+        target_invalid_reg: vec![String::from("PC"), String::from("ZERO")],
+        source_0_invalid_reg: vec![],
+        source_1_invalid_reg: vec![],
+        immediate_0_number_max: 0x3FF,
+        immediate_1_number_max: 0
+    };
+
+    match rast.source_0 {
+        Some(v) => {
+            match v {
+                Source::IMM(i) => {
+                    let opcode: u32 = 0b1000_0000_10 << 22;
+                    match InstDiffTypePars::pars_ti(target_register, i, constraint) {
+                        Ok(v) => return Ok(opcode | v),
+                        Err(e) => return Err(e)
+                    };
+                },
+                Source::REG(r) => {
+                    let opcode: u32 = 0b1000_0000_11 << 22;
+                    match rast.source_1 {
+                        None => {
+                            return Err(String::from("No enought argument when use SUB."));
+                        },
+                        Some(s) => {
+                            match InstDiffTypePars::pars_tss(target_register, r, s, constraint) {
+                                Ok(v) => return Ok(opcode | v),
+                                Err(e) => return Err(e)
+                            };
+                        }
+                    }
+                }
+            }
+        },
+        None => {
+            return Err(String::from("No operation argument when use SUB."));
+        }
+    }
+}
+
 fn pars_jmp(register_info: Vec<&str>, labels: HashMap<String, u64>) -> Result<u32, String> {
     let rast = match generate_register_ast(register_info, labels) {
         Ok(v) => v,
@@ -846,9 +996,10 @@ fn pars_jmp(register_info: Vec<&str>, labels: HashMap<String, u64>) -> Result<u3
         target_invalid_reg: vec![],
         source_0_invalid_reg: vec![],
         source_1_invalid_reg: vec![],
-        immediate_0_number_max: 0xFF,
+        immediate_0_number_max: 0x3F_FFFF,
         immediate_1_number_max: 0
     };
+
 
     match rast.source_0 {
         Some(v) => {
@@ -862,12 +1013,9 @@ fn pars_jmp(register_info: Vec<&str>, labels: HashMap<String, u64>) -> Result<u3
                 },
                 Source::REG(r) => {
                     let opcode = 0b1100_0000_01 << 22;
-                    match rast.source_1 {
+                    match rast.target {
                         None => {
-                            match InstDiffTypePars::pars_ss(r, Register { name: String::from("ZERO"), label: 0 }, constraint) {
-                                Ok(v) => return Ok(opcode | v),
-                                Err(e) => return Err(e)
-                            };
+                            return Err(String::from("No operation argument when use JMP."));
                         },
                         Some(s) => {
                             match InstDiffTypePars::pars_ss(r, s, constraint) {
@@ -880,7 +1028,18 @@ fn pars_jmp(register_info: Vec<&str>, labels: HashMap<String, u64>) -> Result<u3
             }
         },
         None => {
-            return Err(String::from("No operation argument when use MOVE."));
+            match rast.target {
+                None => {
+                    return Err(String::from("No operation argument when use JMP."));
+                },
+                Some(s) => {
+                    let opcode = 0b1100_0000_01 << 22;
+                    match InstDiffTypePars::pars_ss(s, Register { name: String::from("ZERO"), label: 0 }, constraint) {
+                        Ok(v) => return Ok(opcode | v),
+                        Err(e) => return Err(e)
+                    };
+                }
+            }
         }
     }
 }
