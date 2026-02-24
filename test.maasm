@@ -5,12 +5,14 @@ start:
 
     MOVE    %ads, %pc
 
+    ADD     %a2, %a2, [1]
     ADD     %ar0, %a0, %a1
     MOVE    %a0, %ar0
     ADD     %ar0, %a0, %a1
     MOVE    %a1, %ar0
 
-    JMP     %ads
+    EQ      %ar2, %a2, [100]
+    ZJMP    %ads, %ar2
 
 ;because the end of this programm whil be set to address 0xFFFFFFFF 
 ;so start target is not at orginal address(0)

@@ -1,6 +1,7 @@
 use std::{collections::HashMap, num::ParseIntError};
 use crate::FileParser::Instr;
 
+#[derive(Debug, Clone)]
 struct Constraint {
     target_invalid_reg: Vec<String>,
     source_0_invalid_reg: Vec<String>,
@@ -15,7 +16,7 @@ pub fn pars_instructions(instructions: Vec<Instr>, labels: HashMap<String, u64>)
         let mut bin = 0;
 
         if line.data.starts_with("LOAD8") || line.data.starts_with("load8") {
-            bin = match pars_load8(line.data.trim_start_matches("LOAD8").trim_start_matches("load8").trim().split(',').map(|x| x.trim()).collect::<Vec<&str>>(), labels.clone()) {
+            bin = match InstPars::pars_load8(line.data.trim_start_matches("LOAD8").trim_start_matches("load8").trim().split(',').map(|x| x.trim()).collect::<Vec<&str>>(), labels.clone()) {
                 Ok(c) => c,
                 Err(e) => {
                     println!("{}", e);
@@ -23,7 +24,7 @@ pub fn pars_instructions(instructions: Vec<Instr>, labels: HashMap<String, u64>)
                 }
             };
         } else if line.data.starts_with("LOAD16") || line.data.starts_with("load16") {
-            bin = match pars_load16(line.data.trim_start_matches("LOAD16").trim_start_matches("load16").trim().split(',').map(|x| x.trim()).collect::<Vec<&str>>(), labels.clone()) {
+            bin = match InstPars::pars_load16(line.data.trim_start_matches("LOAD16").trim_start_matches("load16").trim().split(',').map(|x| x.trim()).collect::<Vec<&str>>(), labels.clone()) {
                 Ok(c) => c,
                 Err(e) => {
                     println!("{}", e);
@@ -31,7 +32,7 @@ pub fn pars_instructions(instructions: Vec<Instr>, labels: HashMap<String, u64>)
                 }
             };
         } else if line.data.starts_with("LOAD32") || line.data.starts_with("load32") {
-            bin = match pars_load32(line.data.trim_start_matches("LOAD32").trim_start_matches("load32").trim().split(',').map(|x| x.trim()).collect::<Vec<&str>>(), labels.clone()) {
+            bin = match InstPars::pars_load32(line.data.trim_start_matches("LOAD32").trim_start_matches("load32").trim().split(',').map(|x| x.trim()).collect::<Vec<&str>>(), labels.clone()) {
                 Ok(c) => c,
                 Err(e) => {
                     println!("{}", e);
@@ -39,7 +40,7 @@ pub fn pars_instructions(instructions: Vec<Instr>, labels: HashMap<String, u64>)
                 }
             };
         } else if line.data.starts_with("STORE8") || line.data.starts_with("store8") {
-            bin = match pars_store8(line.data.trim_start_matches("STORE8").trim_start_matches("store8").trim().split(',').map(|x| x.trim()).collect::<Vec<&str>>(), labels.clone()) {
+            bin = match InstPars::pars_store8(line.data.trim_start_matches("STORE8").trim_start_matches("store8").trim().split(',').map(|x| x.trim()).collect::<Vec<&str>>(), labels.clone()) {
                 Ok(c) => c,
                 Err(e) => {
                     println!("{}", e);
@@ -47,7 +48,7 @@ pub fn pars_instructions(instructions: Vec<Instr>, labels: HashMap<String, u64>)
                 }
             };
         } else if line.data.starts_with("STORE16") || line.data.starts_with("store16") {
-            bin = match pars_store16(line.data.trim_start_matches("STORE16").trim_start_matches("store16").trim().split(',').map(|x| x.trim()).collect::<Vec<&str>>(), labels.clone()) {
+            bin = match InstPars::pars_store16(line.data.trim_start_matches("STORE16").trim_start_matches("store16").trim().split(',').map(|x| x.trim()).collect::<Vec<&str>>(), labels.clone()) {
                 Ok(c) => c,
                 Err(e) => {
                     println!("{}", e);
@@ -55,7 +56,7 @@ pub fn pars_instructions(instructions: Vec<Instr>, labels: HashMap<String, u64>)
                 }
             };
         } else if line.data.starts_with("STORE32") || line.data.starts_with("store32") {
-            bin = match pars_store32(line.data.trim_start_matches("STORE32").trim_start_matches("store32").trim().split(',').map(|x| x.trim()).collect::<Vec<&str>>(), labels.clone()) {
+            bin = match InstPars::pars_store32(line.data.trim_start_matches("STORE32").trim_start_matches("store32").trim().split(',').map(|x| x.trim()).collect::<Vec<&str>>(), labels.clone()) {
                 Ok(c) => c,
                 Err(e) => {
                     println!("{}", e);
@@ -63,7 +64,7 @@ pub fn pars_instructions(instructions: Vec<Instr>, labels: HashMap<String, u64>)
                 }
             };
         } else if line.data.starts_with("MOVE") || line.data.starts_with("move") {
-            bin = match pars_move(line.data.trim_start_matches("MOVE").trim_start_matches("move").trim().split(',').map(|x| x.trim()).collect::<Vec<&str>>(), labels.clone()) {
+            bin = match InstPars::pars_move(line.data.trim_start_matches("MOVE").trim_start_matches("move").trim().split(',').map(|x| x.trim()).collect::<Vec<&str>>(), labels.clone()) {
                 Ok(c) => c,
                 Err(e) => {
                     println!("{}", e);
@@ -71,7 +72,7 @@ pub fn pars_instructions(instructions: Vec<Instr>, labels: HashMap<String, u64>)
                 }
             };
         } else if line.data.starts_with("ADD") || line.data.starts_with("add") {
-            bin = match pars_add(line.data.trim_start_matches("ADD").trim_start_matches("add").trim().split(',').map(|x| x.trim()).collect::<Vec<&str>>(), labels.clone()) {
+            bin = match InstPars::pars_add(line.data.trim_start_matches("ADD").trim_start_matches("add").trim().split(',').map(|x| x.trim()).collect::<Vec<&str>>(), labels.clone()) {
                 Ok(c) => c,
                 Err(e) => {
                     println!("{}", e);
@@ -79,7 +80,15 @@ pub fn pars_instructions(instructions: Vec<Instr>, labels: HashMap<String, u64>)
                 }
             };
         } else if line.data.starts_with("SUB") || line.data.starts_with("sub") {
-            bin = match pars_sub(line.data.trim_start_matches("SUB").trim_start_matches("sub").trim().split(',').map(|x| x.trim()).collect::<Vec<&str>>(), labels.clone()) {
+            bin = match InstPars::pars_sub(line.data.trim_start_matches("SUB").trim_start_matches("sub").trim().split(',').map(|x| x.trim()).collect::<Vec<&str>>(), labels.clone()) {
+                Ok(c) => c,
+                Err(e) => {
+                    println!("{}", e);
+                    panic!();
+                }
+            };
+        } else if line.data.starts_with("EQ") || line.data.starts_with("eq") {
+            bin = match InstPars::pars_eq(line.data.trim_start_matches("EQ").trim_start_matches("eq").trim().split(',').map(|x| x.trim()).collect::<Vec<&str>>(), labels.clone()) {
                 Ok(c) => c,
                 Err(e) => {
                     println!("{}", e);
@@ -87,7 +96,23 @@ pub fn pars_instructions(instructions: Vec<Instr>, labels: HashMap<String, u64>)
                 }
             };
         } else if line.data.starts_with("JMP") || line.data.starts_with("jmp") {
-            bin = match pars_jmp(line.data.trim_start_matches("JMP").trim_start_matches("jmp").trim().split(',').map(|x| x.trim()).collect::<Vec<&str>>(), labels.clone()) {
+            bin = match InstPars::pars_jmp(line.data.trim_start_matches("JMP").trim_start_matches("jmp").trim().split(',').map(|x| x.trim()).collect::<Vec<&str>>(), labels.clone()) {
+                Ok(c) => c,
+                Err(e) => {
+                    println!("{}", e);
+                    panic!();
+                }
+            };
+        } else if line.data.starts_with("OJMP") || line.data.starts_with("ojmp") {
+            bin = match InstPars::pars_ojmp(line.data.trim_start_matches("OJMP").trim_start_matches("ojmp").trim().split(',').map(|x| x.trim()).collect::<Vec<&str>>(), labels.clone()) {
+                Ok(c) => c,
+                Err(e) => {
+                    println!("{}", e);
+                    panic!();
+                }
+            };
+        } else if line.data.starts_with("ZJMP") || line.data.starts_with("zjmp") {
+            bin = match InstPars::pars_zjmp(line.data.trim_start_matches("ZJMP").trim_start_matches("zjmp").trim().split(',').map(|x| x.trim()).collect::<Vec<&str>>(), labels.clone()) {
                 Ok(c) => c,
                 Err(e) => {
                     println!("{}", e);
@@ -187,208 +212,119 @@ fn para_immediate_num(immediate_number: &str) -> Result<u32, ParseIntError>{
     }
 }
 
+#[derive(Debug, Clone)]
 struct Register {
     name: String,
     label: u8
 }
 
+#[derive(Debug, Clone)]
 enum Source {
     REG(Register),
     IMM(u32)
 }
 
-struct RAST {
-    target: Option<Register>,
+fn generate_register_ast(register_info: Vec<&str>, labels: HashMap<String, u64>) -> Result<Vec<Source>, String> {
+    let mut result = vec![];
 
-    source_0: Option<Source>,
-    source_1: Option<Register>
-}
-
-fn generate_register_ast(register_info: Vec<&str>, labels: HashMap<String, u64>) -> Result<RAST, String> {
-    if register_info[0].starts_with('%') {
-        let target_register = register_info[0].trim_start_matches("%");
-        if register_info.len() == 1 {
-            return Ok(
-                RAST {
-                    target: Some(
-                        Register {
-                            name: target_register.to_string(),
-                            label: match get_register_label(target_register) {
-                                Ok(v) => v,
-                                Err(e) => {
-                                    println!("{}", e);
-                                    panic!();
-                                }
-                            }
-                        }
-                    ),
-                    source_0: None,
-                    source_1: None
+    for item in register_info {
+        if item.starts_with('%') {
+            let register = item.trim_start_matches("%");
+            result.push(Source::REG( Register {
+                name: register.to_string(),
+                label: match get_register_label(register) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        println!("{}", e);
+                        panic!();
+                    }
                 }
-            );
-        } else if register_info.len() == 2 {
-            return Ok(
-                RAST {
-                    target: Some(
-                        Register {
-                            name: target_register.to_string(),
-                            label: match get_register_label(target_register) {
-                                Ok(v) => v,
-                                Err(e) => {
-                                    println!("{}", e);
-                                    panic!();
-                                }
-                            }
-                        }
-                    ),
-
-                    source_0: Some(
-                        if register_info[1].starts_with('[') && register_info[1].ends_with(']') {
-                            Source::IMM(match para_immediate_num(register_info[1].trim_start_matches('[').trim_end_matches(']')) {
-                                Ok(v) => v,
-                                Err(e) => {
-                                    println!("{}", e);
-                                    panic!();
-                                }
-                            })
-                        } else if register_info[1].starts_with('%') {
-                            let register = register_info[1].trim_start_matches('%');
-                            Source::REG(Register {
-                                name: register.to_string(),
-                                label: match get_register_label(register) {
-                                    Ok(v) => v,
-                                    Err(e) => {
-                                        println!("{}", e);
-                                        panic!();
-                                    }
-                                }
-                            })
-                        } else {
-                            if labels.contains_key(register_info[0]) {
-                                Source::IMM(labels[register_info[0]] as u32)
-                            } else {
-                                return Err(String::from("Unknown argument."));
-                            }
-                        }
-                    ),
-                    source_1: None
+            }));
+        } else if item.starts_with('[') {
+            let imdn = item.trim_start_matches("[").trim_end_matches("]").trim();
+            result.push(Source::IMM(match para_immediate_num(imdn) {
+                Ok(v) => v,
+                Err(e) => {
+                    println!("{}", e);
+                    panic!();
                 }
-            );
-        } else if register_info.len() == 3 {
-            return Ok(
-                RAST {
-                    target: Some(
-                        Register {
-                            name: target_register.to_string(),
-                            label: match get_register_label(target_register) {
-                                Ok(v) => v,
-                                Err(e) => {
-                                    println!("{}", e);
-                                    panic!();
-                                }
-                            }
-                        }
-                    ),
-
-                    source_0: Some(
-                        if register_info[1].starts_with('%') {
-                            let register = register_info[1].trim_start_matches('%');
-                            Source::REG(Register {
-                                name: register.to_string(),
-                                label: match get_register_label(register) {
-                                    Ok(v) => v,
-                                    Err(e) => {
-                                        println!("{}", e);
-                                        panic!();
-                                    }
-                                }
-                            })
-                        } else {
-                            if labels.contains_key(register_info[1]) {
-                                Source::IMM(labels[register_info[1]] as u32)
-                            } else {
-                                let imme_number = register_info[1].trim_start_matches('[').trim_end_matches(']').trim();
-                                Source::IMM(match para_immediate_num(imme_number) {
-                                    Ok(v) => v,
-                                    Err(e) => {
-                                        println!("{}", e);
-                                        panic!();
-                                    }
-                                })
-                            }
-                        }
-                    ),
-                    source_1: Some(
-                        if register_info[2].starts_with('%') {
-                            let register = register_info[2].trim_start_matches('%');
-                            Register {
-                                name: register.to_string(),
-                                label: match get_register_label(register) {
-                                    Ok(v) => v,
-                                    Err(e) => {
-                                        println!("{}", e);
-                                        panic!();
-                                    }
-                                }
-                            }
-                        } else {
-                            return Err(String::from("Unknown argument."));
-                        }
-                    )
-                }
-            );
+            }));
+        } else if labels.contains_key(item) {
+            result.push(Source::IMM(labels[item] as u32));
         } else {
-            return Err(String::from("Too much arguments."));
-        }
-    } else if register_info[0].starts_with('[') {
-        let immediate_number = register_info[0].trim_start_matches("[").trim_end_matches(']');
-        return Ok(
-            RAST {
-                target: None,
-                source_0: Some(
-                    Source::IMM(match para_immediate_num(immediate_number) {
-                        Ok(v) => v,
-                        Err(e) => {
-                            println!("{}", e);
-                            panic!();
-                        }
-                    })
-                ),
-                source_1: None
-            }
-        );
-    } else {
-        if labels.contains_key(register_info[0]) {
-        return Ok(
-            RAST {
-                target: None,
-                source_0: Some(Source::IMM(labels[register_info[0]] as u32)),
-                source_1: None
-            }
-        );
-        } else {
-            return Err(String::from("operation target must be a register."));
+            return Err(String::from("Invalid arguments."))
         }
     }
+
+    Ok(result)
 }
 
 struct InstDiffTypePars {}
 
 impl InstDiffTypePars {
-    fn pars_ti(target_register: Register, immediate_number: u32, constraint: Constraint) -> Result<u32, String> {
+    fn pars_ti(rast: Vec<Source>, constraint: Constraint, op_name: &str) -> Result<u32, String> {
+        let target_register = match rast.get(0) {
+            Some(s) => {
+                match s {
+                    Source::REG(r) => r,
+                    Source::IMM(i) => return Err(format!("{}: Invalid target register.", op_name))
+                }
+            },
+            None => return Err(format!("{}: missing parameters.", op_name))
+        };
+
+        let &immediate_number = match rast.get(1) {
+            Some(s) => {
+                match s {
+                    Source::REG(_) => return Err(format!("{}: Invalid immediate number.", op_name)),
+                    Source::IMM(i) => i
+                }
+            },
+            None => return Err(format!("{}: missing parameters.", op_name))
+        };
+
         if constraint.target_invalid_reg.contains(&target_register.name) {
-            return Err(format!("target register can't be {}", target_register.name));
+            return Err(format!("{}: target register can't be {}", op_name, target_register.name));
         }
 
         if immediate_number > constraint.immediate_0_number_max {
-            return Err(format!("immediat number is grater then {}", constraint.immediate_0_number_max));
+            return Err(format!("{}: immediat number is grater then {}", op_name, constraint.immediate_0_number_max));
         }
 
         let bin_code = ((target_register.label as u32) << 16) | immediate_number;
         return Ok(bin_code);
     }
 
-    fn pars_i(immediate_number: u32, constraint: Constraint) -> Result<u32, String> {
+    fn pars_s(rast: Vec<Source>, constraint: Constraint, op_name: &str) -> Result<u32, String> {
+        let target_register = match rast.get(0) {
+            Some(s) => {
+                match s {
+                    Source::REG(r) => r,
+                    Source::IMM(i) => return Err(format!("{}: Invalid target register.", op_name))
+                }
+            },
+            None => return Err(format!("{}: missing parameters.", op_name))
+        };
+
+        if constraint.target_invalid_reg.contains(&target_register.name) {
+            return Err(format!("{}: target register can't be {}", op_name, target_register.name));
+        }
+
+        let bin_code = ((target_register.label as u32) << 16);
+        return Ok(bin_code);
+    }
+
+    fn pars_i(rast: Vec<Source>, constraint: Constraint, op_name: &str) -> Result<u32, String> {
+        let &immediate_number = match rast.get(0) {
+            Some(s) => {
+                match s {
+                    Source::REG(_) => return Err(format!("{}: Invalid immediate number.", op_name)),
+                    Source::IMM(i) => i
+                }
+            },
+            None => return Err(format!("{}: missing parameters.", op_name))
+        };
+
         if immediate_number > constraint.immediate_0_number_max {
             return Err(format!("immediat number is grater then {}", constraint.immediate_0_number_max));
         }
@@ -396,20 +332,60 @@ impl InstDiffTypePars {
         return Ok(immediate_number);
     }
 
-    fn pars_ss(source_0_register: Register, source_1_register: Register, constraint: Constraint) -> Result<u32, String> {
+    fn pars_ss(rast: Vec<Source>, constraint: Constraint, op_name: &str) -> Result<u32, String> {
+        let source_0_register = match rast.get(0) {
+            Some(s) => {
+                match s {
+                    Source::REG(r) => r,
+                    Source::IMM(i) => return Err(format!("{}: Invalid source 0 register.", op_name))
+                }
+            },
+            None => return Err(String::from("LOAD8: missing parameters."))
+        };
+
+        let source_1_register = match rast.get(1) {
+            Some(s) => {
+                match s {
+                    Source::REG(r) => r,
+                    Source::IMM(i) => return Err(format!("{}: Invalid source 1 register.", op_name))
+                }
+            },
+            None => return Err(String::from("LOAD8: missing parameters."))
+        };
+
         if constraint.source_0_invalid_reg.contains(&source_0_register.name) {
-            return Err(format!("source 0 register can't be {}", source_0_register.name));
+            return Err(format!("{}: source 0 register can't be {}", op_name, source_0_register.name));
         }
 
         if constraint.source_1_invalid_reg.contains(&source_1_register.name) {
-            return Err(format!("source 1 register can't be {}", source_1_register.name));
+            return Err(format!("{}: source 1 register can't be {}", op_name, source_1_register.name));
         }
 
         let bin_code = ((source_0_register.label as u32) << 10) | ((source_1_register.label as u32) << 4);
         return Ok(bin_code);
     }
 
-    fn pars_ts(target_register: Register, source_register: Register, constraint: Constraint) -> Result<u32, String> {
+    fn pars_ts(rast: Vec<Source>, constraint: Constraint, op_name: &str) -> Result<u32, String> {
+        let target_register = match rast.get(0) {
+            Some(s) => {
+                match s {
+                    Source::REG(r) => r,
+                    Source::IMM(i) => return Err(format!("{}: Invalid target register.", op_name))
+                }
+            },
+            None => return Err(format!("{}: missing parameters.", op_name))
+        };
+
+        let source_register = match rast.get(1) {
+            Some(s) => {
+                match s {
+                    Source::REG(r) => r,
+                    Source::IMM(i) => return Err(format!("{}: Invalid source register.", op_name))
+                }
+            },
+            None => return Err(format!("{}: missing parameters.", op_name))
+        };
+
         if constraint.target_invalid_reg.contains(&target_register.name) {
             return Err(format!("target register can't be {}", target_register.name));
         }
@@ -422,7 +398,37 @@ impl InstDiffTypePars {
         return Ok(bin_code);
     }
 
-    fn pars_tsi(target_register: Register, source_register: Register, immediate_number: u32, constraint: Constraint) -> Result<u32, String> {
+    fn pars_tsi(rast: Vec<Source>, constraint: Constraint, op_name: &str) -> Result<u32, String> {
+        let target_register = match rast.get(0) {
+            Some(s) => {
+                match s {
+                    Source::REG(r) => r,
+                    Source::IMM(i) => return Err(format!("{}: Invalid target register.", op_name))
+                }
+            },
+            None => return Err(format!("{}: missing parameters.", op_name))
+        };
+
+        let source_register = match rast.get(1) {
+            Some(s) => {
+                match s {
+                    Source::REG(r) => r,
+                    Source::IMM(i) => return Err(format!("{}: Invalid source register.", op_name))
+                }
+            },
+            None => return Err(format!("{}: missing parameters.", op_name))
+        };
+
+        let &immediate_number = match rast.get(2) {
+            Some(s) => {
+                match s {
+                    Source::REG(_) => return Err(format!("{}: Invalid immediate number.", op_name)),
+                    Source::IMM(i) => i
+                }
+            },
+            None => return Err(format!("{}: missing parameters.", op_name))
+        };
+
         if constraint.target_invalid_reg.contains(&target_register.name) {
             return Err(format!("target register can't be {}", target_register.name));
         }
@@ -439,7 +445,37 @@ impl InstDiffTypePars {
         return Ok(bin_code);
     }
 
-    fn pars_tss(target_register: Register, source_0_register: Register, source_1_register: Register, constraint: Constraint) -> Result<u32, String> {
+    fn pars_tss(rast: Vec<Source>, constraint: Constraint, op_name: &str) -> Result<u32, String> {
+        let target_register = match rast.get(0) {
+            Some(s) => {
+                match s {
+                    Source::REG(r) => r,
+                    Source::IMM(i) => return Err(format!("{}: Invalid target register.", op_name))
+                }
+            },
+            None => return Err(format!("{}: missing parameters.", op_name))
+        };
+
+        let source_0_register = match rast.get(1) {
+            Some(s) => {
+                match s {
+                    Source::REG(r) => r,
+                    Source::IMM(i) => return Err(format!("{}: Invalid source register.", op_name))
+                }
+            },
+            None => return Err(format!("{}: missing parameters.", op_name))
+        };
+
+        let source_1_register = match rast.get(2) {
+            Some(s) => {
+                match s {
+                    Source::REG(r) => r,
+                    Source::IMM(i) => return Err(format!("{}: Invalid source register.", op_name))
+                }
+            },
+            None => return Err(format!("{}: missing parameters.", op_name))
+        };
+
         if constraint.target_invalid_reg.contains(&target_register.name) {
             return Err(format!("target register can't be {}", target_register.name));
         }
@@ -456,7 +492,37 @@ impl InstDiffTypePars {
         return Ok(bin_code);
     }
 
-    fn pars_tii(target_register: Register, immediate_0_number: u32, immediate_1_number: u32, constraint: Constraint) -> Result<u32, String> {
+    fn pars_tii(rast: Vec<Source>, constraint: Constraint, op_name: &str) -> Result<u32, String> {
+        let target_register = match rast.get(0) {
+            Some(s) => {
+                match s {
+                    Source::REG(r) => r,
+                    Source::IMM(i) => return Err(format!("{}: Invalid target register.", op_name))
+                }
+            },
+            None => return Err(format!("{}: missing parameters.", op_name))
+        };
+
+        let &immediate_0_number = match rast.get(1) {
+            Some(s) => {
+                match s {
+                    Source::REG(_) => return Err(format!("{}: Invalid immediate number.", op_name)),
+                    Source::IMM(i) => i
+                }
+            },
+            None => return Err(format!("{}: missing parameters.", op_name))
+        };
+
+        let &immediate_1_number = match rast.get(2) {
+            Some(s) => {
+                match s {
+                    Source::REG(_) => return Err(format!("{}: Invalid immediate number.", op_name)),
+                    Source::IMM(i) => i
+                }
+            },
+            None => return Err(format!("{}: missing parameters.", op_name))
+        };
+
         if constraint.target_invalid_reg.contains(&target_register.name) {
             return Err(format!("target register can't be {}", target_register.name));
         }
@@ -474,572 +540,553 @@ impl InstDiffTypePars {
     }
 }
 
-fn pars_load8(register_info: Vec<&str>, labels: HashMap<String, u64>) -> Result<u32, String> {
-    let rast = match generate_register_ast(register_info, labels) {
-        Ok(v) => v,
-        Err(e) => {
-            println!("{}", e);
-            panic!();
-        }
-    };
+struct InstPars {}
 
-    let target_register = match rast.target {
-        Some(r) => r,
-        None => {
-            return Err(String::from("No target register when use LOAD8."))
-        }
-    };
+impl InstPars {
+    fn pars_load8(register_info: Vec<&str>, labels: HashMap<String, u64>) -> Result<u32, String> {
+        let op_name = "LOAD8";
 
-    let constraint = Constraint {
-        target_invalid_reg: vec![String::from("PC"), String::from("ZERO")],
-        source_0_invalid_reg: vec![],
-        source_1_invalid_reg: vec![],
-        immediate_0_number_max: 0xFF,
-        immediate_1_number_max: 0
-    };
+        let rast = match generate_register_ast(register_info, labels) {
+            Ok(v) => v,
+            Err(e) => {
+                println!("{}", e);
+                panic!();
+            }
+        };
 
-    match rast.source_0 {
-        Some(v) => {
-            match v {
-                Source::IMM(i) => {
-                    let opcode: u32 = 0b0000_0000_01 << 22;
-                    match InstDiffTypePars::pars_ti(target_register, i, constraint) {
-                        Ok(v) => return Ok(opcode | v),
-                        Err(e) => return Err(e)
-                    };
-                },
-                Source::REG(r) => {
-                    let opcode: u32 = 0b0000_0000_10 << 22;
-                    match rast.source_1 {
-                        None => {
-                            match InstDiffTypePars::pars_tss(target_register, r, Register { name: String::from("ZERO"), label: 0 }, constraint) {
-                                Ok(v) => return Ok(opcode | v),
-                                Err(e) => return Err(e)
-                            };
-                        },
-                        Some(s) => {
-                            match InstDiffTypePars::pars_tss(target_register, r, s, constraint) {
-                                Ok(v) => return Ok(opcode | v),
-                                Err(e) => return Err(e)
-                            };
+        let constraint = Constraint {
+            target_invalid_reg: vec![String::from("PC"), String::from("ZERO")],
+            source_0_invalid_reg: vec![],
+            source_1_invalid_reg: vec![],
+            immediate_0_number_max: 0xFF,
+            immediate_1_number_max: 0
+        };
+
+        match rast.len() {
+            1 => return Err(format!("{}: Too few arguments!", op_name)),
+            2 => {
+                match InstDiffTypePars::pars_ti(rast.clone(), constraint.clone(), op_name) {
+                    Ok(b) => return Ok((0b0000_0000_01 << 22) | b),
+                    Err(e) => {
+                        match InstDiffTypePars::pars_s(rast, constraint, op_name) {
+                            Ok(b) => return Ok((0b1100_0000_10 << 22) | b),
+                            Err(e) => {
+                                println!("{}", e);
+                                panic!();
+                            }
                         }
                     }
                 }
+            },
+            3 => {
+                match InstDiffTypePars::pars_ti(rast, constraint, op_name) {
+                    Ok(b) => return Ok((0b0000_0000_10 << 22) | b),
+                    Err(e) => {
+                        println!("{}", e);
+                        panic!();
+                    }
+                }
+            },
+            _ => return Err(format!("{}: Too much arguments!", op_name))
+        } 
+    }
+
+    fn pars_load16(register_info: Vec<&str>, labels: HashMap<String, u64>) -> Result<u32, String> {
+        let op_name = "LOAD16";
+
+        let rast = match generate_register_ast(register_info, labels) {
+            Ok(v) => v,
+            Err(e) => {
+                println!("{}", e);
+                panic!();
             }
-        },
-        None => {
-            return Err(String::from("No operation argument when use LOAD8."));
+        };
+
+        let constraint = Constraint {
+            target_invalid_reg: vec![String::from("PC"), String::from("ZERO")],
+            source_0_invalid_reg: vec![],
+            source_1_invalid_reg: vec![],
+            immediate_0_number_max: 0xFF,
+            immediate_1_number_max: 0
+        };
+
+        match rast.len() {
+            1 => return Err(format!("{}: Too few arguments!", op_name)),
+            2 => {
+                match InstDiffTypePars::pars_ti(rast.clone(), constraint.clone(), op_name) {
+                    Ok(b) => return Ok((0b0000_0000_11 << 22) | b),
+                    Err(e) => {
+                        match InstDiffTypePars::pars_s(rast, constraint, op_name) {
+                            Ok(b) => return Ok((0b1100_0001_00 << 22) | b),
+                            Err(e) => {
+                                println!("{}", e);
+                                panic!();
+                            }
+                        }
+                    }
+                }
+            },
+            3 => {
+                match InstDiffTypePars::pars_ti(rast, constraint, op_name) {
+                    Ok(b) => return Ok((0b0000_0001_00 << 22) | b),
+                    Err(e) => {
+                        println!("{}", e);
+                        panic!();
+                    }
+                }
+            },
+            _ => return Err(format!("{}: Too much arguments!", op_name))
+        } 
+    }
+
+    fn pars_load32(register_info: Vec<&str>, labels: HashMap<String, u64>) -> Result<u32, String> {
+        let op_name = "LOAD32";
+
+        let rast = match generate_register_ast(register_info, labels) {
+            Ok(v) => v,
+            Err(e) => {
+                println!("{}", e);
+                panic!();
+            }
+        };
+
+        let constraint = Constraint {
+            target_invalid_reg: vec![String::from("PC"), String::from("ZERO")],
+            source_0_invalid_reg: vec![],
+            source_1_invalid_reg: vec![],
+            immediate_0_number_max: 0xFF,
+            immediate_1_number_max: 0
+        };
+
+        match rast.len() {
+            1 => return Err(format!("{}: Too few arguments!", op_name)),
+            2 => {
+                match InstDiffTypePars::pars_ti(rast.clone(), constraint.clone(), op_name) {
+                    Ok(b) => return Ok((0b0000_0001_10 << 22) | b),
+                    Err(e) => {
+                        match InstDiffTypePars::pars_s(rast, constraint, op_name) {
+                            Ok(b) => return Ok((0b1100_0001_01 << 22) | b),
+                            Err(e) => {
+                                println!("{}", e);
+                                panic!();
+                            }
+                        }
+                    }
+                }
+            },
+            3 => {
+                match InstDiffTypePars::pars_tss(rast, constraint, op_name) {
+                    Ok(b) => return Ok((0b0000_0001_01 << 22) | b),
+                    Err(e) => {
+                        println!("{}", e);
+                        panic!();
+                    }
+                }
+            },
+            _ => return Err(format!("{}: Too much arguments!", op_name))
+        } 
+    }
+
+    fn pars_store8(register_info: Vec<&str>, labels: HashMap<String, u64>) -> Result<u32, String> {
+        let op_name = "STORE8";
+
+        let rast = match generate_register_ast(register_info, labels) {
+            Ok(v) => v,
+            Err(e) => {
+                println!("{}", e);
+                panic!();
+            }
+        };
+
+        let constraint = Constraint {
+            target_invalid_reg: vec![String::from("PC"), String::from("ZERO")],
+            source_0_invalid_reg: vec![],
+            source_1_invalid_reg: vec![],
+            immediate_0_number_max: 0xFF,
+            immediate_1_number_max: 0
+        };
+
+        match rast.len() {
+            1 => return Err(format!("{}: Too few arguments!", op_name)),
+            2 => {
+                match InstDiffTypePars::pars_ts(rast, constraint, op_name) {
+                    Ok(b) => return Ok((0b0000_0001_10 << 22) | b),
+                    Err(e) => {
+                        println!("{}", e);
+                        panic!();
+                    }
+                }
+            },
+            3 => {
+                match InstDiffTypePars::pars_tss(rast, constraint, op_name) {
+                    Ok(b) => return Ok((0b0000_0001_10 << 22) | b),
+                    Err(e) => {
+                        println!("{}", e);
+                        panic!();
+                    }
+                }
+            },
+            _ => return Err(format!("{}: Too much arguments!", op_name))
+        } 
+    }
+
+    fn pars_store16(register_info: Vec<&str>, labels: HashMap<String, u64>) -> Result<u32, String> {
+        let op_name = "STORE16";
+
+        let rast = match generate_register_ast(register_info, labels) {
+            Ok(v) => v,
+            Err(e) => {
+                println!("{}", e);
+                panic!();
+            }
+        };
+
+        let constraint = Constraint {
+            target_invalid_reg: vec![String::from("PC"), String::from("ZERO")],
+            source_0_invalid_reg: vec![],
+            source_1_invalid_reg: vec![],
+            immediate_0_number_max: 0xFF,
+            immediate_1_number_max: 0
+        };
+
+        match rast.len() {
+            1 => return Err(format!("{}: Too few arguments!", op_name)),
+            2 => {
+                match InstDiffTypePars::pars_ts(rast, constraint, op_name) {
+                    Ok(b) => return Ok((0b0000_0001_11 << 22) | b),
+                    Err(e) => {
+                        println!("{}", e);
+                        panic!();
+                    }
+                }
+            },
+            3 => {
+                match InstDiffTypePars::pars_tss(rast, constraint, op_name) {
+                    Ok(b) => return Ok((0b0000_0001_11 << 22) | b),
+                    Err(e) => {
+                        println!("{}", e);
+                        panic!();
+                    }
+                }
+            },
+            _ => return Err(format!("{}: Too much arguments!", op_name))
+        } 
+    }
+
+    fn pars_store32(register_info: Vec<&str>, labels: HashMap<String, u64>) -> Result<u32, String> {
+        let op_name = "STORE32";
+
+        let rast = match generate_register_ast(register_info, labels) {
+            Ok(v) => v,
+            Err(e) => {
+                println!("{}", e);
+                panic!();
+            }
+        };
+
+        let constraint = Constraint {
+            target_invalid_reg: vec![String::from("PC"), String::from("ZERO")],
+            source_0_invalid_reg: vec![],
+            source_1_invalid_reg: vec![],
+            immediate_0_number_max: 0xFF,
+            immediate_1_number_max: 0
+        };
+
+        match rast.len() {
+            1 => return Err(format!("{}: Too few arguments!", op_name)),
+            2 => {
+                match InstDiffTypePars::pars_ts(rast, constraint, op_name) {
+                    Ok(b) => return Ok((0b0000_0010_00 << 22) | b),
+                    Err(e) => {
+                        println!("{}", e);
+                        panic!();
+                    }
+                }
+            },
+            3 => {
+                match InstDiffTypePars::pars_tss(rast, constraint, op_name) {
+                    Ok(b) => return Ok((0b0000_0010_00 << 22) | b),
+                    Err(e) => {
+                        println!("{}", e);
+                        panic!();
+                    }
+                }
+            },
+            _ => return Err(format!("{}: Too much arguments!", op_name))
+        } 
+    }
+
+    fn pars_move(register_info: Vec<&str>, labels: HashMap<String, u64>) -> Result<u32, String> {
+        let op_name = "MOVE";
+
+        let rast = match generate_register_ast(register_info, labels) {
+            Ok(v) => v,
+            Err(e) => {
+                println!("{}", e);
+                panic!();
+            }
+        };
+
+        let constraint = Constraint {
+            target_invalid_reg: vec![String::from("PC"), String::from("ZERO")],
+            source_0_invalid_reg: vec![],
+            source_1_invalid_reg: vec![],
+            immediate_0_number_max: 0xFF,
+            immediate_1_number_max: 0
+        };
+
+        match rast.len() {
+            1 => return Err(format!("{}: Too few arguments!", op_name)),
+            2 => {
+                match InstDiffTypePars::pars_ts(rast, constraint, op_name) {
+                    Ok(b) => return Ok((0b0000_0010_01 << 22) | b),
+                    Err(e) => {
+                        println!("{}", e);
+                        panic!();
+                    }
+                }
+            },
+            _ => return Err(format!("{}: Too much arguments!", op_name))
+        } 
+    }
+
+    fn pars_add(register_info: Vec<&str>, labels: HashMap<String, u64>) -> Result<u32, String> {
+        let op_name = "ADD";
+
+        let rast = match generate_register_ast(register_info, labels) {
+            Ok(v) => v,
+            Err(e) => {
+                println!("{}", e);
+                panic!();
+            }
+        };
+
+        let constraint = Constraint {
+            target_invalid_reg: vec![String::from("PC"), String::from("ZERO")],
+            source_0_invalid_reg: vec![],
+            source_1_invalid_reg: vec![],
+            immediate_0_number_max: 0xFF,
+            immediate_1_number_max: 0
+        };
+
+        match rast.len() {
+            1 | 2 => return Err(format!("{}: Too few arguments!", op_name)),
+            3 => {
+                match InstDiffTypePars::pars_tss(rast.clone(), constraint.clone(), op_name) {
+                    Ok(b) => return Ok((0b1000_0000_01 << 22) | b),
+                    Err(e) => {
+                        match InstDiffTypePars::pars_tsi(rast, constraint, op_name) {
+                            Ok(b) => return Ok((0b1000_0000_00 << 22) | b),
+                            Err(e) => {
+                                println!("{}", e);
+                                panic!();
+                            }
+                        }
+                    }
+                }
+            },
+            _ => return Err(format!("{}: Too much arguments!", op_name))
+        } 
+    }
+
+    fn pars_sub(register_info: Vec<&str>, labels: HashMap<String, u64>) -> Result<u32, String> {
+        let op_name = "SUB";
+
+        let rast = match generate_register_ast(register_info, labels) {
+            Ok(v) => v,
+            Err(e) => {
+                println!("{}", e);
+                panic!();
+            }
+        };
+
+        let constraint = Constraint {
+            target_invalid_reg: vec![String::from("PC"), String::from("ZERO")],
+            source_0_invalid_reg: vec![],
+            source_1_invalid_reg: vec![],
+            immediate_0_number_max: 0xFF,
+            immediate_1_number_max: 0
+        };
+
+        match rast.len() {
+            1 | 2 => return Err(format!("{}: Too few arguments!", op_name)),
+            3 => {
+                match InstDiffTypePars::pars_tss(rast.clone(), constraint.clone(), op_name) {
+                    Ok(b) => return Ok((0b1000_0000_01 << 22) | b),
+                    Err(e) => {
+                        match InstDiffTypePars::pars_tsi(rast, constraint, op_name) {
+                            Ok(b) => return Ok((0b1000_0000_00 << 22) | b),
+                            Err(e) => {
+                                println!("{}", e);
+                                panic!();
+                            }
+                        }
+                    }
+                }
+            },
+            _ => return Err(format!("{}: Too much arguments!", op_name))
         }
     }
-}
 
-fn pars_load16(register_info: Vec<&str>, labels: HashMap<String, u64>) -> Result<u32, String> {
-    let rast = match generate_register_ast(register_info, labels) {
-        Ok(v) => v,
-        Err(e) => {
-            println!("{}", e);
-            panic!();
-        }
-    };
+    fn pars_eq(register_info: Vec<&str>, labels: HashMap<String, u64>) -> Result<u32, String> {
+        let op_name = "EQ";
 
-    let target_register = match rast.target {
-        Some(r) => r,
-        None => {
-            return Err(String::from("No target register when use LOAD8."))
-        }
-    };
+        let rast = match generate_register_ast(register_info, labels) {
+            Ok(v) => v,
+            Err(e) => {
+                println!("{}", e);
+                panic!();
+            }
+        };
 
-    let constraint = Constraint {
-        target_invalid_reg: vec![String::from("PC"), String::from("ZERO")],
-        source_0_invalid_reg: vec![],
-        source_1_invalid_reg: vec![],
-        immediate_0_number_max: 0xFF,
-        immediate_1_number_max: 0
-    };
+        let constraint = Constraint {
+            target_invalid_reg: vec![String::from("PC"), String::from("ZERO")],
+            source_0_invalid_reg: vec![],
+            source_1_invalid_reg: vec![],
+            immediate_0_number_max: 0x3FF,
+            immediate_1_number_max: 0
+        };
 
-    match rast.source_0 {
-        Some(v) => {
-            match v {
-                Source::IMM(i) => {
-                    let opcode: u32 = 0b0000_0000_11 << 22;
-                    match InstDiffTypePars::pars_ti(target_register, i, constraint) {
-                        Ok(v) => return Ok(opcode | v),
-                        Err(e) => return Err(e)
-                    };
-                },
-                Source::REG(r) => {
-                    let opcode: u32 = 0b0000_0001_00 << 22;
-                    match rast.source_1 {
-                        None => {
-                            match InstDiffTypePars::pars_tss(target_register, r, Register { name: String::from("ZERO"), label: 0 }, constraint) {
-                                Ok(v) => return Ok(opcode | v),
-                                Err(e) => return Err(e)
-                            };
-                        },
-                        Some(s) => {
-                            match InstDiffTypePars::pars_tss(target_register, r, s, constraint) {
-                                Ok(v) => return Ok(opcode | v),
-                                Err(e) => return Err(e)
-                            };
+        match rast.len() {
+            1 | 2 => return Err(format!("{}: Too few arguments!", op_name)),
+            3 => match InstDiffTypePars::pars_tss(rast.clone(), constraint.clone(), op_name) {
+                Ok(b) => return Ok((0b1001_0000_11 << 22) | b),
+                Err(e) => {
+                    match InstDiffTypePars::pars_tsi(rast, constraint, op_name) {
+                        Ok(b) => return Ok((0b1001_0000_10 << 22) | b),
+                        Err(e) => {
+                            println!("{}", e);
+                            panic!();
                         }
                     }
                 }
             }
-        },
-        None => {
-            return Err(String::from("No operation argument when use LOAD8."));
-        }
+            _ => return Err(format!("{}: Too much arguments!", op_name))
+        } 
     }
-}
 
-fn pars_load32(register_info: Vec<&str>, labels: HashMap<String, u64>) -> Result<u32, String> {
-    let rast = match generate_register_ast(register_info, labels) {
-        Ok(v) => v,
-        Err(e) => {
-            println!("{}", e);
-            panic!();
-        }
-    };
+    fn pars_jmp(register_info: Vec<&str>, labels: HashMap<String, u64>) -> Result<u32, String> {
+        let op_name = "JMP";
 
-    let target_register = match rast.target {
-        Some(r) => r,
-        None => {
-            return Err(String::from("No target register when use LOAD8."))
-        }
-    };
+        let rast = match generate_register_ast(register_info, labels) {
+            Ok(v) => v,
+            Err(e) => {
+                println!("{}", e);
+                panic!();
+            }
+        };
 
-    let constraint = Constraint {
-        target_invalid_reg: vec![String::from("PC"), String::from("ZERO")],
-        source_0_invalid_reg: vec![],
-        source_1_invalid_reg: vec![],
-        immediate_0_number_max: 0xFF,
-        immediate_1_number_max: 0
-    };
+        let constraint = Constraint {
+            target_invalid_reg: vec![String::from("PC"), String::from("ZERO")],
+            source_0_invalid_reg: vec![],
+            source_1_invalid_reg: vec![],
+            immediate_0_number_max: 0x3FFFFF,
+            immediate_1_number_max: 0
+        };
 
-    match rast.source_0 {
-        Some(v) => {
-            match v {
-                Source::IMM(i) => {
-                    return Err(String::from("LOAD32 Can't load 32bit immediate number"))
-                },
-                Source::REG(r) => {
-                    let opcode: u32 = 0b0000_0001_01 << 22;
-                    match rast.source_1 {
-                        None => {
-                            match InstDiffTypePars::pars_tss(target_register, r, Register { name: String::from("ZERO"), label: 0 }, constraint) {
-                                Ok(v) => return Ok(opcode | v),
-                                Err(e) => return Err(e)
-                            };
-                        },
-                        Some(s) => {
-                            match InstDiffTypePars::pars_tss(target_register, r, s, constraint) {
-                                Ok(v) => return Ok(opcode | v),
-                                Err(e) => return Err(e)
-                            };
+        match rast.len() {
+            1 => {
+                match InstDiffTypePars::pars_i(rast.clone(), constraint.clone(), op_name) {
+                    Ok(b) => return Ok((0b1100_0000_00 << 22) | b),
+                    Err(e) => {
+                        match InstDiffTypePars::pars_s(rast, constraint, op_name) {
+                            Ok(b) => return Ok((0b1100_0000_01 << 22) | b),
+                            Err(e) => {
+                                println!("{}", e);
+                                panic!();
+                            }
                         }
                     }
                 }
-            }
-        },
-        None => {
-            return Err(String::from("No operation argument when use LOAD8."));
-        }
+            },
+            2 => {
+                match InstDiffTypePars::pars_ss(rast, constraint, op_name) {
+                    Ok(b) => return Ok((0b1100_0000_01 << 22) | b),
+                    Err(e) => {
+                        println!("{}", e);
+                        panic!();
+                    }
+                }
+            },
+            _ => return Err(format!("{}: Too much arguments!", op_name))
+        } 
     }
-}
 
-fn pars_store8(register_info: Vec<&str>, labels: HashMap<String, u64>) -> Result<u32, String> {
-    let rast = match generate_register_ast(register_info, labels) {
-        Ok(v) => v,
-        Err(e) => {
-            println!("{}", e);
-            panic!();
-        }
-    };
+    fn pars_ojmp(register_info: Vec<&str>, labels: HashMap<String, u64>) -> Result<u32, String> {
+        let op_name = "OJMP";
 
-    let target_register = match rast.target {
-        Some(r) => r,
-        None => {
-            return Err(String::from("No target register when use STORE8."))
-        }
-    };
+        let rast = match generate_register_ast(register_info, labels) {
+            Ok(v) => v,
+            Err(e) => {
+                println!("{}", e);
+                panic!();
+            }
+        };
 
-    let constraint = Constraint {
-        target_invalid_reg: vec![String::from("PC"), String::from("ZERO")],
-        source_0_invalid_reg: vec![],
-        source_1_invalid_reg: vec![],
-        immediate_0_number_max: 0xFF,
-        immediate_1_number_max: 0
-    };
+        let constraint = Constraint {
+            target_invalid_reg: vec![String::from("PC"), String::from("ZERO")],
+            source_0_invalid_reg: vec![],
+            source_1_invalid_reg: vec![],
+            immediate_0_number_max: 0x3FFFFF,
+            immediate_1_number_max: 0
+        };
 
-    match rast.source_0 {
-        Some(v) => {
-            match v {
-                Source::IMM(i) => {
-                    return Err(String::from("STORE8 Can't use immediate number as sourece."))
-                },
-                Source::REG(r) => {
-                    let opcode: u32 = 0b0000_0001_10 << 22;
-                    match rast.source_1 {
-                        None => {
-                            match InstDiffTypePars::pars_tss(target_register, r, Register { name: String::from("ZERO"), label: 0 }, constraint) {
-                                Ok(v) => return Ok(opcode | v),
-                                Err(e) => return Err(e)
-                            };
-                        },
-                        Some(s) => {
-                            match InstDiffTypePars::pars_tss(target_register, r, s, constraint) {
-                                Ok(v) => return Ok(opcode | v),
-                                Err(e) => return Err(e)
-                            };
+        match rast.len() {
+            1 => return Err(format!("{}: Too few arguments!", op_name)),
+            2 => {
+                match InstDiffTypePars::pars_ts(rast.clone(), constraint.clone(), op_name) {
+                    Ok(b) => return Ok((0b1100_0000_10 << 22) | b),
+                    Err(e) => {
+                        match InstDiffTypePars::pars_ti(rast, constraint, op_name) {
+                            Ok(b) => return Ok((0b1100_0000_11 << 22) | b),
+                            Err(e) => {
+                                println!("{}", e);
+                                panic!();
+                            }
                         }
                     }
                 }
-            }
-        },
-        None => {
-            return Err(String::from("No operation argument when use STORE8."));
-        }
+            },
+            _ => return Err(format!("{}: Too much arguments!", op_name))
+        } 
     }
-}
 
-fn pars_store16(register_info: Vec<&str>, labels: HashMap<String, u64>) -> Result<u32, String> {
-    let rast = match generate_register_ast(register_info, labels) {
-        Ok(v) => v,
-        Err(e) => {
-            println!("{}", e);
-            panic!();
-        }
-    };
+    fn pars_zjmp(register_info: Vec<&str>, labels: HashMap<String, u64>) -> Result<u32, String> {
+        let op_name = "ZJMP";
 
-    let target_register = match rast.target {
-        Some(r) => r,
-        None => {
-            return Err(String::from("No target register when use STORE16."))
-        }
-    };
+        let rast = match generate_register_ast(register_info, labels) {
+            Ok(v) => v,
+            Err(e) => {
+                println!("{}", e);
+                panic!();
+            }
+        };
 
-    let constraint = Constraint {
-        target_invalid_reg: vec![String::from("PC"), String::from("ZERO")],
-        source_0_invalid_reg: vec![],
-        source_1_invalid_reg: vec![],
-        immediate_0_number_max: 0xFF,
-        immediate_1_number_max: 0
-    };
+        let constraint = Constraint {
+            target_invalid_reg: vec![String::from("PC"), String::from("ZERO")],
+            source_0_invalid_reg: vec![],
+            source_1_invalid_reg: vec![],
+            immediate_0_number_max: 0x3FFFFF,
+            immediate_1_number_max: 0
+        };
 
-    match rast.source_0 {
-        Some(v) => {
-            match v {
-                Source::IMM(i) => {
-                    return Err(String::from("STORE16 Can't use immediate number as sourece."))
-                },
-                Source::REG(r) => {
-                    let opcode: u32 = 0b0000_0001_11 << 22;
-                    match rast.source_1 {
-                        None => {
-                            match InstDiffTypePars::pars_tss(target_register, r, Register { name: String::from("ZERO"), label: 0 }, constraint) {
-                                Ok(v) => return Ok(opcode | v),
-                                Err(e) => return Err(e)
-                            };
-                        },
-                        Some(s) => {
-                            match InstDiffTypePars::pars_tss(target_register, r, s, constraint) {
-                                Ok(v) => return Ok(opcode | v),
-                                Err(e) => return Err(e)
-                            };
+        match rast.len() {
+            1 => return Err(format!("{}: Too few arguments!", op_name)),
+            2 => {
+                match InstDiffTypePars::pars_ts(rast.clone(), constraint.clone(), op_name) {
+                    Ok(b) => return Ok((0b1100_0001_00 << 22) | b),
+                    Err(e) => {
+                        match InstDiffTypePars::pars_ti(rast, constraint, op_name) {
+                            Ok(b) => return Ok((0b1100_0001_01 << 22) | b),
+                            Err(e) => {
+                                println!("{}", e);
+                                panic!();
+                            }
                         }
                     }
                 }
-            }
-        },
-        None => {
-            return Err(String::from("No operation argument when use STORE16."));
-        }
-    }
-}
-
-fn pars_store32(register_info: Vec<&str>, labels: HashMap<String, u64>) -> Result<u32, String> {
-    let rast = match generate_register_ast(register_info, labels) {
-        Ok(v) => v,
-        Err(e) => {
-            println!("{}", e);
-            panic!();
-        }
-    };
-
-    let target_register = match rast.target {
-        Some(r) => r,
-        None => {
-            return Err(String::from("No target register when use STORE32."))
-        }
-    };
-
-    let constraint = Constraint {
-        target_invalid_reg: vec![String::from("PC"), String::from("ZERO")],
-        source_0_invalid_reg: vec![],
-        source_1_invalid_reg: vec![],
-        immediate_0_number_max: 0xFF,
-        immediate_1_number_max: 0
-    };
-
-    match rast.source_0 {
-        Some(v) => {
-            match v {
-                Source::IMM(i) => {
-                    return Err(String::from("STORE32 Can't use immediate number as sourece."))
-                },
-                Source::REG(r) => {
-                    let opcode: u32 = 0b0000_0010_00 << 22;
-                    match rast.source_1 {
-                        None => {
-                            match InstDiffTypePars::pars_tss(target_register, r, Register { name: String::from("ZERO"), label: 0 }, constraint) {
-                                Ok(v) => return Ok(opcode | v),
-                                Err(e) => return Err(e)
-                            };
-                        },
-                        Some(s) => {
-                            match InstDiffTypePars::pars_tss(target_register, r, s, constraint) {
-                                Ok(v) => return Ok(opcode | v),
-                                Err(e) => return Err(e)
-                            };
-                        }
-                    }
-                }
-            }
-        },
-        None => {
-            return Err(String::from("No operation argument when use STORE32."));
-        }
-    }
-}
-
-fn pars_move(register_info: Vec<&str>, labels: HashMap<String, u64>) -> Result<u32, String> {
-    let rast = match generate_register_ast(register_info, labels) {
-        Ok(v) => v,
-        Err(e) => {
-            println!("{}", e);
-            panic!();
-        }
-    };
-
-    let target_register = match rast.target {
-        Some(r) => r,
-        None => {
-            return Err(String::from("No target register when use MOVE."))
-        }
-    };
-
-    let constraint = Constraint {
-        target_invalid_reg: vec![String::from("PC"), String::from("ZERO")],
-        source_0_invalid_reg: vec![],
-        source_1_invalid_reg: vec![],
-        immediate_0_number_max: 0xFF,
-        immediate_1_number_max: 0
-    };
-
-    match rast.source_0 {
-        Some(v) => {
-            match v {
-                Source::IMM(i) => {
-                    return Err(String::from("MOVE Can't use immediate number as sourece."))
-                },
-                Source::REG(r) => {
-                    let opcode: u32 = 0b0000_0010_01 << 22;
-                    match rast.source_1 {
-                        None => {
-                            match InstDiffTypePars::pars_ts(target_register, r, constraint) {
-                                Ok(v) => return Ok(opcode | v),
-                                Err(e) => return Err(e)
-                            };
-                        },
-                        Some(s) => {
-                            return Err(String::from("MOVE Can't use two register as source."))
-                        }
-                    }
-                }
-            }
-        },
-        None => {
-            return Err(String::from("No operation argument when use MOVE."));
-        }
-    }
-}
-
-fn pars_add(register_info: Vec<&str>, labels: HashMap<String, u64>) -> Result<u32, String> {
-    let rast = match generate_register_ast(register_info, labels) {
-        Ok(v) => v,
-        Err(e) => {
-            println!("{}", e);
-            panic!();
-        }
-    };
-
-    let target_register = match rast.target {
-        Some(r) => r,
-        None => {
-            return Err(String::from("No target register when use ADD."))
-        }
-    };
-
-    let constraint = Constraint {
-        target_invalid_reg: vec![String::from("PC"), String::from("ZERO")],
-        source_0_invalid_reg: vec![],
-        source_1_invalid_reg: vec![],
-        immediate_0_number_max: 0x3FF,
-        immediate_1_number_max: 0
-    };
-
-    match rast.source_0 {
-        Some(v) => {
-            match v {
-                Source::IMM(i) => {
-                    let opcode: u32 = 0b1000_0000_00 << 22;
-                    match rast.source_1 {
-                        None => {
-                            return Err(String::from("No enought argument when use ADD."));
-                        },
-                        Some(s) => {
-                            match InstDiffTypePars::pars_tsi(target_register, s, i, constraint) {
-                                Ok(v) => return Ok(opcode | v),
-                                Err(e) => return Err(e)
-                            };
-                        }
-                    }
-                },
-                Source::REG(r) => {
-                    let opcode: u32 = 0b1000_0000_01 << 22;
-                    match rast.source_1 {
-                        None => {
-                            return Err(String::from("No enought argument when use ADD."));
-                        },
-                        Some(s) => {
-                            match InstDiffTypePars::pars_tss(target_register, r, s, constraint) {
-                                Ok(v) => return Ok(opcode | v),
-                                Err(e) => return Err(e)
-                            };
-                        }
-                    }
-                }
-            }
-        },
-        None => {
-            return Err(String::from("No operation argument when use ADD."));
-        }
-    }
-}
-
-fn pars_sub(register_info: Vec<&str>, labels: HashMap<String, u64>) -> Result<u32, String> {
-    let rast = match generate_register_ast(register_info, labels) {
-        Ok(v) => v,
-        Err(e) => {
-            println!("{}", e);
-            panic!();
-        }
-    };
-
-    let target_register = match rast.target {
-        Some(r) => r,
-        None => {
-            return Err(String::from("No target register when use SUB."))
-        }
-    };
-
-    let constraint = Constraint {
-        target_invalid_reg: vec![String::from("PC"), String::from("ZERO")],
-        source_0_invalid_reg: vec![],
-        source_1_invalid_reg: vec![],
-        immediate_0_number_max: 0x3FF,
-        immediate_1_number_max: 0
-    };
-
-    match rast.source_0 {
-        Some(v) => {
-            match v {
-                Source::IMM(i) => {
-                    let opcode: u32 = 0b1000_0000_10 << 22;
-                    match InstDiffTypePars::pars_ti(target_register, i, constraint) {
-                        Ok(v) => return Ok(opcode | v),
-                        Err(e) => return Err(e)
-                    };
-                },
-                Source::REG(r) => {
-                    let opcode: u32 = 0b1000_0000_11 << 22;
-                    match rast.source_1 {
-                        None => {
-                            return Err(String::from("No enought argument when use SUB."));
-                        },
-                        Some(s) => {
-                            match InstDiffTypePars::pars_tss(target_register, r, s, constraint) {
-                                Ok(v) => return Ok(opcode | v),
-                                Err(e) => return Err(e)
-                            };
-                        }
-                    }
-                }
-            }
-        },
-        None => {
-            return Err(String::from("No operation argument when use SUB."));
-        }
-    }
-}
-
-fn pars_jmp(register_info: Vec<&str>, labels: HashMap<String, u64>) -> Result<u32, String> {
-    let rast = match generate_register_ast(register_info, labels) {
-        Ok(v) => v,
-        Err(e) => {
-            println!("{}", e);
-            panic!();
-        }
-    };
-
-    let constraint = Constraint {
-        target_invalid_reg: vec![],
-        source_0_invalid_reg: vec![],
-        source_1_invalid_reg: vec![],
-        immediate_0_number_max: 0x3F_FFFF,
-        immediate_1_number_max: 0
-    };
-
-
-    match rast.source_0 {
-        Some(v) => {
-            match v {
-                Source::IMM(i) => {
-                    let opcode = 0b1100_0000_00 << 22;
-                    match InstDiffTypePars::pars_i(i, constraint) {
-                        Ok(v) => return Ok(opcode | v),
-                        Err(e) => return Err(e)
-                    }
-                },
-                Source::REG(r) => {
-                    let opcode = 0b1100_0000_01 << 22;
-                    match rast.target {
-                        None => {
-                            return Err(String::from("No operation argument when use JMP."));
-                        },
-                        Some(s) => {
-                            match InstDiffTypePars::pars_ss(r, s, constraint) {
-                                Ok(v) => return Ok(opcode | v),
-                                Err(e) => return Err(e)
-                            };
-                        }
-                    }
-                }
-            }
-        },
-        None => {
-            match rast.target {
-                None => {
-                    return Err(String::from("No operation argument when use JMP."));
-                },
-                Some(s) => {
-                    let opcode = 0b1100_0000_01 << 22;
-                    match InstDiffTypePars::pars_ss(s, Register { name: String::from("ZERO"), label: 0 }, constraint) {
-                        Ok(v) => return Ok(opcode | v),
-                        Err(e) => return Err(e)
-                    };
-                }
-            }
-        }
+            },
+            _ => return Err(format!("{}: Too much arguments!", op_name))
+        } 
     }
 }
