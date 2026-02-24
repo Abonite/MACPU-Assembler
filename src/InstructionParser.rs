@@ -1034,10 +1034,10 @@ impl InstPars {
         match rast.len() {
             1 => return Err(format!("{}: Too few arguments!", op_name)),
             2 => {
-                match InstDiffTypePars::pars_ts(rast.clone(), constraint.clone(), op_name) {
+                match InstDiffTypePars::pars_ti(rast.clone(), constraint.clone(), op_name) {
                     Ok(b) => return Ok((0b1100_0000_10 << 22) | b),
                     Err(e) => {
-                        match InstDiffTypePars::pars_ti(rast, constraint, op_name) {
+                        match InstDiffTypePars::pars_ts(rast, constraint, op_name) {
                             Ok(b) => return Ok((0b1100_0000_11 << 22) | b),
                             Err(e) => {
                                 println!("{}", e);
@@ -1073,10 +1073,10 @@ impl InstPars {
         match rast.len() {
             1 => return Err(format!("{}: Too few arguments!", op_name)),
             2 => {
-                match InstDiffTypePars::pars_ts(rast.clone(), constraint.clone(), op_name) {
+                match InstDiffTypePars::pars_ti(rast.clone(), constraint.clone(), op_name) {
                     Ok(b) => return Ok((0b1100_0001_00 << 22) | b),
                     Err(e) => {
-                        match InstDiffTypePars::pars_ti(rast, constraint, op_name) {
+                        match InstDiffTypePars::pars_ts(rast, constraint, op_name) {
                             Ok(b) => return Ok((0b1100_0001_01 << 22) | b),
                             Err(e) => {
                                 println!("{}", e);
