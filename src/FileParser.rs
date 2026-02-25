@@ -5,7 +5,8 @@ use std::collections::HashMap;
 
 pub struct Instr {
     pub data: String,
-    pub address: u64
+    pub address: u64,
+    pub line: u64
 }
 
 pub fn pars_file(file_path: String) -> (Vec<Instr>, HashMap<String, u64>) {
@@ -33,7 +34,7 @@ pub fn pars_file(file_path: String) -> (Vec<Instr>, HashMap<String, u64>) {
     let mut instr = vec![];
     let mut label = HashMap::new();
     let mut addr_counter = 0;
-    for line in file_in_lines {
+    for (line, line_number) in file_in_lines {
         if line.ends_with(':') {
             label.insert(line.trim_end_matches(':').to_string(), addr_counter);
         } else if line.starts_with(".AT") {
@@ -64,7 +65,7 @@ pub fn pars_file(file_path: String) -> (Vec<Instr>, HashMap<String, u64>) {
                 };
             }
         } else {
-            instr.push(Instr { data: line, address: addr_counter});
+            instr.push(Instr { data: line, address: addr_counter, line: line_number});
             addr_counter += 4;
         }
     }
@@ -72,30 +73,32 @@ pub fn pars_file(file_path: String) -> (Vec<Instr>, HashMap<String, u64>) {
     return (instr, label);
 }
 
-fn remove_comment(file_in_lines: Vec<&str>) -> Vec<String> {
+fn remove_comment(file_in_lines: Vec<&str>) -> Vec<(String, u64)> {
     let mut result = vec![];
+    let mut line_number = 0;
 
     for line in file_in_lines {
+        line_number += 1;
         if line.starts_with(";") {
             continue;
         } else {
             let splited_line = line.split(';').collect::<Vec<&str>>();
-            result.push(splited_line[0].to_string());
+            result.push((splited_line[0].to_string(), line_number));
         }
     }
 
     result
 }
 
-fn remove_blank(file_in_lines: Vec<String>) -> Vec<String> {
+fn remove_blank(file_in_lines: Vec<(String, u64)>) -> Vec<(String, u64)> {
     let mut result = vec![];
 
-    for line in file_in_lines {
+    for (line, line_number) in file_in_lines {
         let line = line.trim().to_string();
         if line.is_empty() {
             continue;
         } else {
-            result.push(line.to_string());
+            result.push((line.to_string(), line_number));
         }
     }
 

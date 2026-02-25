@@ -20,6 +20,7 @@ pub fn pars_instructions(instructions: Vec<Instr>, labels: HashMap<String, u64>)
                 Ok(c) => c,
                 Err(e) => {
                     println!("{}", e);
+                    println!("line: {}", line.line);
                     panic!();
                 }
             };
@@ -28,6 +29,7 @@ pub fn pars_instructions(instructions: Vec<Instr>, labels: HashMap<String, u64>)
                 Ok(c) => c,
                 Err(e) => {
                     println!("{}", e);
+                    println!("line: {}", line.line);
                     panic!();
                 }
             };
@@ -36,6 +38,7 @@ pub fn pars_instructions(instructions: Vec<Instr>, labels: HashMap<String, u64>)
                 Ok(c) => c,
                 Err(e) => {
                     println!("{}", e);
+                    println!("line: {}", line.line);
                     panic!();
                 }
             };
@@ -44,6 +47,7 @@ pub fn pars_instructions(instructions: Vec<Instr>, labels: HashMap<String, u64>)
                 Ok(c) => c,
                 Err(e) => {
                     println!("{}", e);
+                    println!("line: {}", line.line);
                     panic!();
                 }
             };
@@ -52,6 +56,7 @@ pub fn pars_instructions(instructions: Vec<Instr>, labels: HashMap<String, u64>)
                 Ok(c) => c,
                 Err(e) => {
                     println!("{}", e);
+                    println!("line: {}", line.line);
                     panic!();
                 }
             };
@@ -60,6 +65,7 @@ pub fn pars_instructions(instructions: Vec<Instr>, labels: HashMap<String, u64>)
                 Ok(c) => c,
                 Err(e) => {
                     println!("{}", e);
+                    println!("line: {}", line.line);
                     panic!();
                 }
             };
@@ -68,6 +74,7 @@ pub fn pars_instructions(instructions: Vec<Instr>, labels: HashMap<String, u64>)
                 Ok(c) => c,
                 Err(e) => {
                     println!("{}", e);
+                    println!("line: {}", line.line);
                     panic!();
                 }
             };
@@ -76,6 +83,7 @@ pub fn pars_instructions(instructions: Vec<Instr>, labels: HashMap<String, u64>)
                 Ok(c) => c,
                 Err(e) => {
                     println!("{}", e);
+                    println!("line: {}", line.line);
                     panic!();
                 }
             };
@@ -84,6 +92,7 @@ pub fn pars_instructions(instructions: Vec<Instr>, labels: HashMap<String, u64>)
                 Ok(c) => c,
                 Err(e) => {
                     println!("{}", e);
+                    println!("line: {}", line.line);
                     panic!();
                 }
             };
@@ -92,6 +101,7 @@ pub fn pars_instructions(instructions: Vec<Instr>, labels: HashMap<String, u64>)
                 Ok(c) => c,
                 Err(e) => {
                     println!("{}", e);
+                    println!("line: {}", line.line);
                     panic!();
                 }
             };
@@ -100,6 +110,7 @@ pub fn pars_instructions(instructions: Vec<Instr>, labels: HashMap<String, u64>)
                 Ok(c) => c,
                 Err(e) => {
                     println!("{}", e);
+                    println!("line: {}", line.line);
                     panic!();
                 }
             };
@@ -108,6 +119,7 @@ pub fn pars_instructions(instructions: Vec<Instr>, labels: HashMap<String, u64>)
                 Ok(c) => c,
                 Err(e) => {
                     println!("{}", e);
+                    println!("line: {}", line.line);
                     panic!();
                 }
             };
@@ -116,6 +128,7 @@ pub fn pars_instructions(instructions: Vec<Instr>, labels: HashMap<String, u64>)
                 Ok(c) => c,
                 Err(e) => {
                     println!("{}", e);
+                    println!("line: {}", line.line);
                     panic!();
                 }
             };
@@ -548,10 +561,7 @@ impl InstPars {
 
         let rast = match generate_register_ast(register_info, labels) {
             Ok(v) => v,
-            Err(e) => {
-                println!("{}", e);
-                panic!();
-            }
+            Err(e) => return Err(e)
         };
 
         let constraint = Constraint {
@@ -570,10 +580,7 @@ impl InstPars {
                     Err(e) => {
                         match InstDiffTypePars::pars_s(rast, constraint, op_name) {
                             Ok(b) => return Ok((0b1100_0000_10 << 22) | b),
-                            Err(e) => {
-                                println!("{}", e);
-                                panic!();
-                            }
+                            Err(e) => return Err(e)
                         }
                     }
                 }
@@ -581,10 +588,7 @@ impl InstPars {
             3 => {
                 match InstDiffTypePars::pars_ti(rast, constraint, op_name) {
                     Ok(b) => return Ok((0b0000_0000_10 << 22) | b),
-                    Err(e) => {
-                        println!("{}", e);
-                        panic!();
-                    }
+                    Err(e) => return Err(e)
                 }
             },
             _ => return Err(format!("{}: Too much arguments!", op_name))
@@ -596,10 +600,7 @@ impl InstPars {
 
         let rast = match generate_register_ast(register_info, labels) {
             Ok(v) => v,
-            Err(e) => {
-                println!("{}", e);
-                panic!();
-            }
+            Err(e) => return Err(e)
         };
 
         let constraint = Constraint {
@@ -615,13 +616,10 @@ impl InstPars {
             2 => {
                 match InstDiffTypePars::pars_ti(rast.clone(), constraint.clone(), op_name) {
                     Ok(b) => return Ok((0b0000_0000_11 << 22) | b),
-                    Err(e) => {
+                    Err(e1) => {
                         match InstDiffTypePars::pars_s(rast, constraint, op_name) {
                             Ok(b) => return Ok((0b1100_0001_00 << 22) | b),
-                            Err(e) => {
-                                println!("{}", e);
-                                panic!();
-                            }
+                            Err(e) => return Err(e1 + "\n" + &e)
                         }
                     }
                 }
@@ -629,10 +627,7 @@ impl InstPars {
             3 => {
                 match InstDiffTypePars::pars_ti(rast, constraint, op_name) {
                     Ok(b) => return Ok((0b0000_0001_00 << 22) | b),
-                    Err(e) => {
-                        println!("{}", e);
-                        panic!();
-                    }
+                    Err(e) => Err(e)
                 }
             },
             _ => return Err(format!("{}: Too much arguments!", op_name))
@@ -644,10 +639,7 @@ impl InstPars {
 
         let rast = match generate_register_ast(register_info, labels) {
             Ok(v) => v,
-            Err(e) => {
-                println!("{}", e);
-                panic!();
-            }
+            Err(e) => return Err(e)
         };
 
         let constraint = Constraint {
@@ -663,13 +655,10 @@ impl InstPars {
             2 => {
                 match InstDiffTypePars::pars_ti(rast.clone(), constraint.clone(), op_name) {
                     Ok(b) => return Ok((0b0000_0001_10 << 22) | b),
-                    Err(e) => {
+                    Err(e1) => {
                         match InstDiffTypePars::pars_s(rast, constraint, op_name) {
                             Ok(b) => return Ok((0b1100_0001_01 << 22) | b),
-                            Err(e) => {
-                                println!("{}", e);
-                                panic!();
-                            }
+                            Err(e) => return Err(e1 + "\n" + &e)
                         }
                     }
                 }
@@ -677,10 +666,7 @@ impl InstPars {
             3 => {
                 match InstDiffTypePars::pars_tss(rast, constraint, op_name) {
                     Ok(b) => return Ok((0b0000_0001_01 << 22) | b),
-                    Err(e) => {
-                        println!("{}", e);
-                        panic!();
-                    }
+                    Err(e) => return Err(e)
                 }
             },
             _ => return Err(format!("{}: Too much arguments!", op_name))
@@ -692,10 +678,7 @@ impl InstPars {
 
         let rast = match generate_register_ast(register_info, labels) {
             Ok(v) => v,
-            Err(e) => {
-                println!("{}", e);
-                panic!();
-            }
+            Err(e) => return Err(e)
         };
 
         let constraint = Constraint {
@@ -711,19 +694,13 @@ impl InstPars {
             2 => {
                 match InstDiffTypePars::pars_ts(rast, constraint, op_name) {
                     Ok(b) => return Ok((0b0000_0001_10 << 22) | b),
-                    Err(e) => {
-                        println!("{}", e);
-                        panic!();
-                    }
+                    Err(e) => return Err(e)
                 }
             },
             3 => {
                 match InstDiffTypePars::pars_tss(rast, constraint, op_name) {
                     Ok(b) => return Ok((0b0000_0001_10 << 22) | b),
-                    Err(e) => {
-                        println!("{}", e);
-                        panic!();
-                    }
+                    Err(e) => return Err(e)
                 }
             },
             _ => return Err(format!("{}: Too much arguments!", op_name))
@@ -735,10 +712,7 @@ impl InstPars {
 
         let rast = match generate_register_ast(register_info, labels) {
             Ok(v) => v,
-            Err(e) => {
-                println!("{}", e);
-                panic!();
-            }
+            Err(e) => return Err(e)
         };
 
         let constraint = Constraint {
@@ -754,19 +728,13 @@ impl InstPars {
             2 => {
                 match InstDiffTypePars::pars_ts(rast, constraint, op_name) {
                     Ok(b) => return Ok((0b0000_0001_11 << 22) | b),
-                    Err(e) => {
-                        println!("{}", e);
-                        panic!();
-                    }
+                    Err(e) => return Err(e)
                 }
             },
             3 => {
                 match InstDiffTypePars::pars_tss(rast, constraint, op_name) {
                     Ok(b) => return Ok((0b0000_0001_11 << 22) | b),
-                    Err(e) => {
-                        println!("{}", e);
-                        panic!();
-                    }
+                    Err(e) => return Err(e)
                 }
             },
             _ => return Err(format!("{}: Too much arguments!", op_name))
@@ -778,10 +746,7 @@ impl InstPars {
 
         let rast = match generate_register_ast(register_info, labels) {
             Ok(v) => v,
-            Err(e) => {
-                println!("{}", e);
-                panic!();
-            }
+            Err(e) => return Err(e)
         };
 
         let constraint = Constraint {
@@ -797,19 +762,13 @@ impl InstPars {
             2 => {
                 match InstDiffTypePars::pars_ts(rast, constraint, op_name) {
                     Ok(b) => return Ok((0b0000_0010_00 << 22) | b),
-                    Err(e) => {
-                        println!("{}", e);
-                        panic!();
-                    }
+                    Err(e) => return Err(e)
                 }
             },
             3 => {
                 match InstDiffTypePars::pars_tss(rast, constraint, op_name) {
                     Ok(b) => return Ok((0b0000_0010_00 << 22) | b),
-                    Err(e) => {
-                        println!("{}", e);
-                        panic!();
-                    }
+                    Err(e) => return Err(e)
                 }
             },
             _ => return Err(format!("{}: Too much arguments!", op_name))
@@ -821,10 +780,7 @@ impl InstPars {
 
         let rast = match generate_register_ast(register_info, labels) {
             Ok(v) => v,
-            Err(e) => {
-                println!("{}", e);
-                panic!();
-            }
+            Err(e) => return Err(e)
         };
 
         let constraint = Constraint {
@@ -840,10 +796,7 @@ impl InstPars {
             2 => {
                 match InstDiffTypePars::pars_ts(rast, constraint, op_name) {
                     Ok(b) => return Ok((0b0000_0010_01 << 22) | b),
-                    Err(e) => {
-                        println!("{}", e);
-                        panic!();
-                    }
+                    Err(e) => return Err(e)
                 }
             },
             _ => return Err(format!("{}: Too much arguments!", op_name))
@@ -855,10 +808,7 @@ impl InstPars {
 
         let rast = match generate_register_ast(register_info, labels) {
             Ok(v) => v,
-            Err(e) => {
-                println!("{}", e);
-                panic!();
-            }
+            Err(e) => return Err(e)
         };
 
         let constraint = Constraint {
@@ -874,13 +824,10 @@ impl InstPars {
             3 => {
                 match InstDiffTypePars::pars_tss(rast.clone(), constraint.clone(), op_name) {
                     Ok(b) => return Ok((0b1000_0000_01 << 22) | b),
-                    Err(e) => {
+                    Err(e1) => {
                         match InstDiffTypePars::pars_tsi(rast, constraint, op_name) {
                             Ok(b) => return Ok((0b1000_0000_00 << 22) | b),
-                            Err(e) => {
-                                println!("{}", e);
-                                panic!();
-                            }
+                            Err(e) => return Err(e1 + "\n" + &e)
                         }
                     }
                 }
@@ -894,10 +841,7 @@ impl InstPars {
 
         let rast = match generate_register_ast(register_info, labels) {
             Ok(v) => v,
-            Err(e) => {
-                println!("{}", e);
-                panic!();
-            }
+            Err(e) => return Err(e)
         };
 
         let constraint = Constraint {
@@ -913,13 +857,10 @@ impl InstPars {
             3 => {
                 match InstDiffTypePars::pars_tss(rast.clone(), constraint.clone(), op_name) {
                     Ok(b) => return Ok((0b1000_0000_01 << 22) | b),
-                    Err(e) => {
+                    Err(e1) => {
                         match InstDiffTypePars::pars_tsi(rast, constraint, op_name) {
                             Ok(b) => return Ok((0b1000_0000_00 << 22) | b),
-                            Err(e) => {
-                                println!("{}", e);
-                                panic!();
-                            }
+                            Err(e) => return Err(e1 + "\n" + &e)
                         }
                     }
                 }
@@ -933,10 +874,7 @@ impl InstPars {
 
         let rast = match generate_register_ast(register_info, labels) {
             Ok(v) => v,
-            Err(e) => {
-                println!("{}", e);
-                panic!();
-            }
+            Err(e) => return Err(e)
         };
 
         let constraint = Constraint {
@@ -951,13 +889,10 @@ impl InstPars {
             1 | 2 => return Err(format!("{}: Too few arguments!", op_name)),
             3 => match InstDiffTypePars::pars_tss(rast.clone(), constraint.clone(), op_name) {
                 Ok(b) => return Ok((0b1001_0000_11 << 22) | b),
-                Err(e) => {
+                Err(e1) => {
                     match InstDiffTypePars::pars_tsi(rast, constraint, op_name) {
                         Ok(b) => return Ok((0b1001_0000_10 << 22) | b),
-                        Err(e) => {
-                            println!("{}", e);
-                            panic!();
-                        }
+                        Err(e) => return Err(e1 + "\n" + &e)
                     }
                 }
             }
@@ -970,10 +905,7 @@ impl InstPars {
 
         let rast = match generate_register_ast(register_info, labels) {
             Ok(v) => v,
-            Err(e) => {
-                println!("{}", e);
-                panic!();
-            }
+            Err(e) => return Err(e)
         };
 
         let constraint = Constraint {
@@ -988,13 +920,10 @@ impl InstPars {
             1 => {
                 match InstDiffTypePars::pars_i(rast.clone(), constraint.clone(), op_name) {
                     Ok(b) => return Ok((0b1100_0000_00 << 22) | b),
-                    Err(e) => {
+                    Err(e1) => {
                         match InstDiffTypePars::pars_s(rast, constraint, op_name) {
                             Ok(b) => return Ok((0b1100_0000_01 << 22) | b),
-                            Err(e) => {
-                                println!("{}", e);
-                                panic!();
-                            }
+                            Err(e) => return Err(e1 + "\n" + &e)
                         }
                     }
                 }
@@ -1002,10 +931,7 @@ impl InstPars {
             2 => {
                 match InstDiffTypePars::pars_ss(rast, constraint, op_name) {
                     Ok(b) => return Ok((0b1100_0000_01 << 22) | b),
-                    Err(e) => {
-                        println!("{}", e);
-                        panic!();
-                    }
+                    Err(e) => return Err(e)
                 }
             },
             _ => return Err(format!("{}: Too much arguments!", op_name))
@@ -1017,10 +943,7 @@ impl InstPars {
 
         let rast = match generate_register_ast(register_info, labels) {
             Ok(v) => v,
-            Err(e) => {
-                println!("{}", e);
-                panic!();
-            }
+            Err(e) => return Err(e)
         };
 
         let constraint = Constraint {
@@ -1036,13 +959,10 @@ impl InstPars {
             2 => {
                 match InstDiffTypePars::pars_ti(rast.clone(), constraint.clone(), op_name) {
                     Ok(b) => return Ok((0b1100_0000_10 << 22) | b),
-                    Err(e) => {
+                    Err(e1) => {
                         match InstDiffTypePars::pars_ts(rast, constraint, op_name) {
                             Ok(b) => return Ok((0b1100_0000_11 << 22) | b),
-                            Err(e) => {
-                                println!("{}", e);
-                                panic!();
-                            }
+                            Err(e) => return Err(e1 + "\n" + &e)
                         }
                     }
                 }
@@ -1056,10 +976,7 @@ impl InstPars {
 
         let rast = match generate_register_ast(register_info, labels) {
             Ok(v) => v,
-            Err(e) => {
-                println!("{}", e);
-                panic!();
-            }
+            Err(e) => return Err(e)
         };
 
         let constraint = Constraint {
@@ -1075,13 +992,10 @@ impl InstPars {
             2 => {
                 match InstDiffTypePars::pars_ti(rast.clone(), constraint.clone(), op_name) {
                     Ok(b) => return Ok((0b1100_0001_00 << 22) | b),
-                    Err(e) => {
+                    Err(e1) => {
                         match InstDiffTypePars::pars_ts(rast, constraint, op_name) {
                             Ok(b) => return Ok((0b1100_0001_01 << 22) | b),
-                            Err(e) => {
-                                println!("{}", e);
-                                panic!();
-                            }
+                            Err(e) => return Err(e1 + "\n" + &e)
                         }
                     }
                 }

@@ -1,4 +1,5 @@
 ;A test programm
+;0x3F0000
 start:
     LOAD8   %a0, [1]
     LOAD8   %a1, [1]
@@ -12,9 +13,26 @@ start:
     MOVE    %a1, %ar0
 
     EQ      %ar2, %a2, [100]
-    ZJMP    %ads, %ar2
+    ZJMP    %ar2, %ads
+
+.AT 0x50
+    EQ      %br0, %a3, [0]  ;Unknow code
+    OJMP    %br0, [0x0100]
+    EQ      %br0, %a3, [1]  ;Invalid operator register a
+    OJMP    %br0, [0x0200]
+    EQ      %br0, %a3, [2]  ;Invalid operator register b
+    OJMP    %br0, [0x0300]
+    EQ      %br0, %a3, [3]  ;Invalid operator register c
+    OJMP    %br0, [0x0400]
+    JMP     [0x3FFFFC]
+
+; FATAL ERROR INT ADDR
+.AT 0xFFF8
+    JMP [0x300000]
+
 
 ;because the end of this programm whil be set to address 0xFFFFFFFF 
 ;so start target is not at orginal address(0)
+; RESET ADDR
 .AT 0xFFFC
     JMP [0x3F0000]
