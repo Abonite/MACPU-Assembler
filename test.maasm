@@ -28,7 +28,7 @@ start:
 
 ; FATAL ERROR INT ADDR
 .AT 0xFFF8
-    JMP [0x300000]
+    JMP [0x3F0050]
 
 
 ;because the end of this programm whil be set to address 0xFFFFFFFF 
