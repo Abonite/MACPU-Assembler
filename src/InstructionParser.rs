@@ -265,11 +265,18 @@ fn generate_register_ast(register_info: Vec<&str>, labels: HashMap<String, u64>)
         } else if labels.contains_key(item) {
             result.push(Source::IMM(labels[item] as u32));
         } else {
+            calculate_expression(item, labels);
             return Err(String::from("Invalid arguments."))
         }
     }
 
     Ok(result)
+}
+
+fn calculate_expression(expression: &str, labels: HashMap<String, u64>) -> Result<u32, String> {
+    let mut tokens = vec![];
+
+    
 }
 
 struct InstDiffTypePars {}
