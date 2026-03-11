@@ -276,7 +276,117 @@ fn generate_register_ast(register_info: Vec<&str>, labels: HashMap<String, u64>)
 fn calculate_expression(expression: &str, labels: HashMap<String, u64>) -> Result<u32, String> {
     let mut tokens = vec![];
 
-    
+    let mut token = String::new();
+    let mut curr_state = "";
+    for c in expression.chars() {
+        match c {
+            '+' | '-' | '*' | '/' | '%' |'(' | ')' => {
+                tokens.push(token.as_str());
+                tokens.push(String::from(c).as_str());
+                token.clear();
+            },
+            '<' => {
+                if curr_state == "slf" {
+                    tokens.push(token.as_str());
+                    tokens.push("<<");
+                    token.clear();
+                    curr_state = "";
+                } else if curr_state.is_empty() {
+                    curr_state = "slf";
+                } else {
+                    return Err(String::from("Invalid calculate symbol."))
+                }
+            },
+            '>' => {
+                if curr_state == "srf" {
+                    tokens.push(token.as_str());
+                    tokens.push(">>");
+                    token.clear();
+                    curr_state = "";
+                } else if curr_state.is_empty() {
+                    curr_state = "srf";
+                } else {
+                    return Err(String::from("Invalid calculate symbol."))
+                }
+            },
+            _ => {
+                token.push(c);
+            }
+        }
+    }
+
+    enum TokenType<'a> {
+        Op(&'a str),
+        Num(i64)
+    }
+
+    let mut tokens_in_number = vec![];
+
+    for token in tokens {
+        token = token.trim();
+        if token.starts_with("0x") {
+            let num = match i64::from_str_radix(token.trim_start_matches("0x"), 16) {
+                Ok(v) => TokenType::Num(v),
+                Err(e) => return Err(format!("{}", e))
+            };
+
+            tokens_in_number.push(num);
+        } else if token.starts_with("0o") {
+            let num = match i64::from_str_radix(token.trim_start_matches("0x"), 8) {
+                Ok(v) => TokenType::Num(v),
+                Err(e) => return Err(format!("{}", e))
+            };
+
+            tokens_in_number.push(num);
+        } else if token.starts_with("0d") {
+            let num = match i64::from_str_radix(token.trim_start_matches("0x"), 2) {
+                Ok(v) => TokenType::Num(v),
+                Err(e) => return Err(format!("{}", e))
+            };
+
+            tokens_in_number.push(num);
+        } else {
+            let num = match i64::from_str_radix(token.trim_start_matches("0x"), 2) {
+                Ok(v) => TokenType::Num(v),
+                Err(e) => {
+                    match token {
+                        "+" | "-" | "*" | "/" | "%" | "<<" | ">>" | "(" | ")" => TokenType::Op(token),
+                        _ => {
+                            match labels.get(token) {
+                                Some(&l) => TokenType::Num(l as i64),
+                                None => return Err(format!("Unknow string: {}", token))
+                            }
+                        }
+                    }
+                }
+            };
+
+            tokens_in_number.push(num);
+        }
+    }
+
+    enum ExpressionNum<'a> {
+        Num(i64),
+        Exp(ExpressionTree<'a>)
+    }
+
+    struct ExpressionTree<'a> {
+        op: &'a str,
+        exp: Vec<ExpressionNum<'a>>
+    }
+
+    let mut token_tree_root = ExpressionTree {
+        op: "",
+        exp: vec![]
+    };
+
+    for token in tokens_in_number {
+        match token {
+            TokenType::Op(o) => {
+
+            }
+        }
+    }
 }
 
 struct InstDiffTypePars {}
