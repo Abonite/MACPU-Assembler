@@ -282,7 +282,7 @@ fn calculate_expression(expression: &str, labels: HashMap<String, u64>) -> Resul
     let mut curr_state = "";
     for c in expression.chars() {
         match c {
-            '+' | '-' | '*' | '/' | '%' | '(' | ')' => {
+            '+' | '-' | '*' | '/' | '%' | '(' | ')' | '&' | '|' | '^' => {
                 if !token.is_empty() {
                     tokens.push(token.clone());
                     token.clear();
@@ -374,7 +374,7 @@ fn calculate_expression(expression: &str, labels: HashMap<String, u64>) -> Resul
                 Err(e) => return Err(format!("Invalid binary number '{}': {}", token, e)),
             }
         } else if token == "+" || token == "-" || token == "*" || token == "/" || token == "%" ||
-                  token == "<<" || token == ">>" || token == "(" || token == ")" {
+                  token == "<<" || token == ">>" || token == "(" || token == ")" || token == "&" || token == "|" || token == "^" {
             parsed_tokens.push(Token::Op(token.to_string()));
         } else {
             // 尝试解析为十进制数字
@@ -401,7 +401,7 @@ fn calculate_expression(expression: &str, labels: HashMap<String, u64>) -> Resul
     // 获取运算符优先级
     fn precedence(op: &str) -> i32 {
         match op {
-            "<<" | ">>" => 1,
+            "<<" | ">>" | "&" | "|" | "^" => 1,
             "+" | "-" => 2,
             "*" | "/" | "%" => 3,
             ")" => -1,
@@ -517,6 +517,9 @@ fn calculate_expression(expression: &str, labels: HashMap<String, u64>) -> Resul
                     }
                     "<<" => Ok(left_val << right_val),
                     ">>" => Ok(left_val >> right_val),
+                    "&" => Ok(left_val & right_val),
+                    "|" => Ok(left_val | right_val),
+                    "^" => Ok(left_val ^ right_val),
                     _ => Err(format!("Unknown operator: {}", op)),
                 }
             }
@@ -1349,9 +1352,13 @@ mod tests {
         assert!(calculate_expression("(1 + 2", labels.clone()).is_err()); // 缺少右括号
         assert!(calculate_expression("1 + 2)", labels.clone()).is_err()); // 缺少左括号
 
-        // 无效符号
-        assert!(calculate_expression("1 & 2", labels.clone()).is_err()); // & 不支持
-        assert!(calculate_expression("1 | 2", labels.clone()).is_err()); // | 不支持
+        // 位运算符
+        assert_eq!(calculate_expression("1 & 2", labels.clone()), Ok(0)); // 1 & 2 = 0
+        assert_eq!(calculate_expression("1 | 2", labels.clone()), Ok(3)); // 1 | 2 = 3
+        assert_eq!(calculate_expression("1 ^ 2", labels.clone()), Ok(3)); // 1 ^ 2 = 3 (xor)
+        assert_eq!(calculate_expression("0xFF & 0x0F", labels.clone()), Ok(0x0F)); // 掩码测试
+        assert_eq!(calculate_expression("0x1234 & 0xFF", labels.clone()), Ok(0x34)); // 低字节
+        assert_eq!(calculate_expression("(0x1234 & 0xFF00) >> 8", labels.clone()), Ok(0x12)); // 高字节移位
     }
 
     #[test]

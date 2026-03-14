@@ -10,24 +10,30 @@ check_ram:
     LOAD8 %a2, [0xFF]
     LOAD8 %ar1, [0]
 
+    ; set jmp back to start of loop
+    LOAD32 %b1, check_ram_loop & 0x0000FFFF
+    LOAD32 %b2, (check_ram_loop & 0xFFFF0000) >> 16
+    ADD %b1, %b2, %b1
+
     check_ram_loop:
-        STORE32 %a1, %a0
-        LOAD32  %a3, %a0
+        STORE8 %a1, %a0
+        LOAD8  %a3, %a0
         EQ %ar0, %a3, [0]
-        STORE32 %a1, %a2
+        STORE8 %a1, %a2
         ZJMP %ar0, error
-        LOAD32  %a3, %a0
-        EQ %ar0, %a3, [0xFFFF]
+        LOAD8  %a3, %a0
+        EQ %ar0, %a3, [0xFF]
         ZJMP %ar0, error
         ADD %ar1, %ar1, [1]
         ADD %a0, %a0, [1]
-        JMP check_ram_loop
+
+        JMP %b1
 
     error:
         ;
 
 ; FATAL ERROR INT ADDR
-.AT 0xFFF8
+.AT 0xFFFF8
     JMP [0x3F0050]
 
 ; RESET ADDR
