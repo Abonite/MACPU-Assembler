@@ -265,8 +265,10 @@ fn generate_register_ast(register_info: Vec<&str>, labels: HashMap<String, u64>)
         } else if labels.contains_key(item) {
             result.push(Source::IMM(labels[item] as u32));
         } else {
-            calculate_expression(item, labels);
-            return Err(String::from("Invalid arguments."))
+            match calculate_expression(item, labels.clone()) {
+                Ok(val) => result.push(Source::IMM(val)),
+                Err(e) => return Err(format!("Invalid expression '{}': {}", item, e)),
+            }
         }
     }
 
@@ -274,119 +276,259 @@ fn generate_register_ast(register_info: Vec<&str>, labels: HashMap<String, u64>)
 }
 
 fn calculate_expression(expression: &str, labels: HashMap<String, u64>) -> Result<u32, String> {
+    // 词法分析：将表达式分割成令牌
     let mut tokens = vec![];
-
     let mut token = String::new();
     let mut curr_state = "";
     for c in expression.chars() {
         match c {
-            '+' | '-' | '*' | '/' | '%' |'(' | ')' => {
-                tokens.push(token.as_str());
-                tokens.push(String::from(c).as_str());
-                token.clear();
+            '+' | '-' | '*' | '/' | '%' | '(' | ')' => {
+                if !token.is_empty() {
+                    tokens.push(token.clone());
+                    token.clear();
+                }
+                tokens.push(c.to_string());
+                curr_state = "";
             },
             '<' => {
                 if curr_state == "slf" {
-                    tokens.push(token.as_str());
-                    tokens.push("<<");
-                    token.clear();
+                    if !token.is_empty() {
+                        tokens.push(token.clone());
+                        token.clear();
+                    }
+                    tokens.push("<<".to_string());
                     curr_state = "";
                 } else if curr_state.is_empty() {
                     curr_state = "slf";
                 } else {
-                    return Err(String::from("Invalid calculate symbol."))
+                    return Err(String::from("Invalid calculate symbol."));
                 }
             },
             '>' => {
                 if curr_state == "srf" {
-                    tokens.push(token.as_str());
-                    tokens.push(">>");
-                    token.clear();
+                    if !token.is_empty() {
+                        tokens.push(token.clone());
+                        token.clear();
+                    }
+                    tokens.push(">>".to_string());
                     curr_state = "";
                 } else if curr_state.is_empty() {
                     curr_state = "srf";
                 } else {
-                    return Err(String::from("Invalid calculate symbol."))
+                    return Err(String::from("Invalid calculate symbol."));
                 }
             },
             _ => {
+                // 如果当前处于状态，但遇到非状态字符，则先推送状态字符
+                if curr_state == "slf" {
+                    tokens.push("<".to_string());
+                    curr_state = "";
+                } else if curr_state == "srf" {
+                    tokens.push(">".to_string());
+                    curr_state = "";
+                }
                 token.push(c);
             }
         }
     }
-
-    enum TokenType<'a> {
-        Op(&'a str),
-        Num(i64)
+    // 处理末尾可能的状态
+    if curr_state == "slf" {
+        tokens.push("<".to_string());
+    } else if curr_state == "srf" {
+        tokens.push(">".to_string());
+    }
+    // 处理最后一个令牌
+    if !token.is_empty() {
+        tokens.push(token);
     }
 
-    let mut tokens_in_number = vec![];
+    // 定义令牌类型
+    #[derive(Debug, Clone)]
+    enum Token {
+        Op(String),
+        Num(i64),
+    }
 
+    // 将字符串令牌转换为Token枚举
+    let mut parsed_tokens = vec![];
     for token in tokens {
-        token = token.trim();
+        let token = token.trim();
+        if token.is_empty() {
+            continue;
+        }
+
+        // 检查是否为数字字面量
         if token.starts_with("0x") {
-            let num = match i64::from_str_radix(token.trim_start_matches("0x"), 16) {
-                Ok(v) => TokenType::Num(v),
-                Err(e) => return Err(format!("{}", e))
-            };
-
-            tokens_in_number.push(num);
+            match i64::from_str_radix(&token[2..], 16) {
+                Ok(v) => parsed_tokens.push(Token::Num(v)),
+                Err(e) => return Err(format!("Invalid hex number '{}': {}", token, e)),
+            }
         } else if token.starts_with("0o") {
-            let num = match i64::from_str_radix(token.trim_start_matches("0x"), 8) {
-                Ok(v) => TokenType::Num(v),
-                Err(e) => return Err(format!("{}", e))
-            };
-
-            tokens_in_number.push(num);
-        } else if token.starts_with("0d") {
-            let num = match i64::from_str_radix(token.trim_start_matches("0x"), 2) {
-                Ok(v) => TokenType::Num(v),
-                Err(e) => return Err(format!("{}", e))
-            };
-
-            tokens_in_number.push(num);
+            match i64::from_str_radix(&token[2..], 8) {
+                Ok(v) => parsed_tokens.push(Token::Num(v)),
+                Err(e) => return Err(format!("Invalid octal number '{}': {}", token, e)),
+            }
+        } else if token.starts_with("0b") {
+            match i64::from_str_radix(&token[2..], 2) {
+                Ok(v) => parsed_tokens.push(Token::Num(v)),
+                Err(e) => return Err(format!("Invalid binary number '{}': {}", token, e)),
+            }
+        } else if token == "+" || token == "-" || token == "*" || token == "/" || token == "%" ||
+                  token == "<<" || token == ">>" || token == "(" || token == ")" {
+            parsed_tokens.push(Token::Op(token.to_string()));
         } else {
-            let num = match i64::from_str_radix(token.trim_start_matches("0x"), 2) {
-                Ok(v) => TokenType::Num(v),
-                Err(e) => {
-                    match token {
-                        "+" | "-" | "*" | "/" | "%" | "<<" | ">>" | "(" | ")" => TokenType::Op(token),
-                        _ => {
-                            match labels.get(token) {
-                                Some(&l) => TokenType::Num(l as i64),
-                                None => return Err(format!("Unknow string: {}", token))
-                            }
-                        }
+            // 尝试解析为十进制数字
+            match token.parse::<i64>() {
+                Ok(v) => parsed_tokens.push(Token::Num(v)),
+                Err(_) => {
+                    // 检查是否为标签
+                    match labels.get(token) {
+                        Some(&l) => parsed_tokens.push(Token::Num(l as i64)),
+                        None => return Err(format!("Unknown symbol: {}", token)),
                     }
                 }
-            };
-
-            tokens_in_number.push(num);
-        }
-    }
-
-    enum ExpressionNum<'a> {
-        Num(i64),
-        Exp(ExpressionTree<'a>)
-    }
-
-    struct ExpressionTree<'a> {
-        op: &'a str,
-        exp: Vec<ExpressionNum<'a>>
-    }
-
-    let mut token_tree_root = ExpressionTree {
-        op: "",
-        exp: vec![]
-    };
-
-    for token in tokens_in_number {
-        match token {
-            TokenType::Op(o) => {
-
             }
         }
     }
+
+    // 普拉特解析器实现
+    #[derive(Debug)]
+    enum Expr {
+        Number(i64),
+        BinaryOp(String, Box<Expr>, Box<Expr>),
+    }
+
+    // 获取运算符优先级
+    fn precedence(op: &str) -> i32 {
+        match op {
+            "<<" | ">>" => 1,
+            "+" | "-" => 2,
+            "*" | "/" | "%" => 3,
+            ")" => -1,
+            "(" => -1,
+            _ => 0,
+        }
+    }
+
+    // 解析表达式
+    struct Parser {
+        tokens: Vec<Token>,
+        pos: usize,
+    }
+
+    impl Parser {
+        fn new(tokens: Vec<Token>) -> Self {
+            Parser { tokens, pos: 0 }
+        }
+
+        fn current(&self) -> Option<&Token> {
+            self.tokens.get(self.pos)
+        }
+
+        fn consume(&mut self) -> Option<Token> {
+            if self.pos < self.tokens.len() {
+                let token = self.tokens[self.pos].clone();
+                self.pos += 1;
+                Some(token)
+            } else {
+                None
+            }
+        }
+
+        fn parse_expression(&mut self, min_precedence: i32) -> Result<Expr, String> {
+            // 解析左侧表达式
+            let mut left = self.parse_primary()?;
+
+            while let Some(Token::Op(op)) = self.current() {
+                let prec = precedence(op);
+                if prec < min_precedence {
+                    break;
+                }
+
+                // 左结合性，所以当前优先级+1
+                let next_min_precedence = prec + 1;
+                let op = op.clone();
+                self.consume(); // 消费运算符
+
+                let right = self.parse_expression(next_min_precedence)?;
+                left = Expr::BinaryOp(op, Box::new(left), Box::new(right));
+            }
+
+            Ok(left)
+        }
+
+        fn parse_primary(&mut self) -> Result<Expr, String> {
+            match self.consume() {
+                Some(Token::Num(n)) => Ok(Expr::Number(n)),
+                Some(Token::Op(op)) if op == "(" => {
+                    let expr = self.parse_expression(0)?;
+                    match self.current() {
+                        Some(Token::Op(closing)) if closing == ")" => {
+                            self.consume();
+                            Ok(expr)
+                        }
+                        _ => Err("Expected ')'".to_string()),
+                    }
+                }
+                Some(Token::Op(op)) if op == "-" => {
+                    // 一元负号（可选实现）
+                    let expr = self.parse_primary()?;
+                    Ok(Expr::BinaryOp("*".to_string(), Box::new(Expr::Number(-1)), Box::new(expr)))
+                }
+                _ => Err("Expected number or '('".to_string()),
+            }
+        }
+
+        fn parse(&mut self) -> Result<Expr, String> {
+            let expr = self.parse_expression(0)?;
+            if self.pos < self.tokens.len() {
+                Err("Unexpected tokens at end of expression".to_string())
+            } else {
+                Ok(expr)
+            }
+        }
+    }
+
+    let mut parser = Parser::new(parsed_tokens);
+    let expr = parser.parse()?;
+
+    // 计算表达式值
+    fn eval(expr: Expr) -> Result<i64, String> {
+        match expr {
+            Expr::Number(n) => Ok(n),
+            Expr::BinaryOp(op, left, right) => {
+                let left_val = eval(*left)?;
+                let right_val = eval(*right)?;
+                match op.as_str() {
+                    "+" => Ok(left_val + right_val),
+                    "-" => Ok(left_val - right_val),
+                    "*" => Ok(left_val * right_val),
+                    "/" => {
+                        if right_val == 0 {
+                            return Err("Division by zero".to_string());
+                        }
+                        Ok(left_val / right_val)
+                    }
+                    "%" => {
+                        if right_val == 0 {
+                            return Err("Modulo by zero".to_string());
+                        }
+                        Ok(left_val % right_val)
+                    }
+                    "<<" => Ok(left_val << right_val),
+                    ">>" => Ok(left_val >> right_val),
+                    _ => Err(format!("Unknown operator: {}", op)),
+                }
+            }
+        }
+    }
+
+    let result = eval(expr)?;
+    // 转换为u32，检查溢出
+    if result < 0 || result > u32::MAX as i64 {
+        return Err("Expression result out of u32 range".to_string());
+    }
+    Ok(result as u32)
 }
 
 struct InstDiffTypePars {}
@@ -1118,6 +1260,138 @@ impl InstPars {
                 }
             },
             _ => return Err(format!("{}: Too much arguments!", op_name))
-        } 
+        }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    #[test]
+    fn test_calculate_expression_basic() {
+        let labels = HashMap::new();
+        assert_eq!(calculate_expression("1 + 2", labels.clone()), Ok(3));
+        assert_eq!(calculate_expression("2 * 3", labels.clone()), Ok(6));
+        assert_eq!(calculate_expression("1 + 2 * 3", labels.clone()), Ok(7));
+        assert_eq!(calculate_expression("(1 + 2) * 3", labels.clone()), Ok(9));
+        assert_eq!(calculate_expression("10 / 2", labels.clone()), Ok(5));
+        assert_eq!(calculate_expression("10 % 3", labels.clone()), Ok(1));
+        assert_eq!(calculate_expression("1 << 4", labels.clone()), Ok(16));
+        assert_eq!(calculate_expression("16 >> 2", labels.clone()), Ok(4));
+    }
+
+    #[test]
+    fn test_calculate_expression_complex() {
+        let labels = HashMap::new();
+        // 嵌套括号
+        assert_eq!(calculate_expression("((1 + 2) * 3) + 4", labels.clone()), Ok(13));
+        assert_eq!(calculate_expression("2 * (3 + 4) * 5", labels.clone()), Ok(70));
+
+        // 混合运算符
+        assert_eq!(calculate_expression("1 + 2 * 3 << 2", labels.clone()), Ok(28)); // 1 + (2*3) = 7, 7 << 2 = 28
+        assert_eq!(calculate_expression("(1 + 2) << (3 - 1)", labels.clone()), Ok(12)); // 3 << 2 = 12
+
+        // 除法取模组合
+        assert_eq!(calculate_expression("10 / 3 * 3 + 10 % 3", labels.clone()), Ok(10));
+
+        // 多位移位
+        assert_eq!(calculate_expression("1 << 2 << 3", labels.clone()), Ok(32)); // 1 << 2 = 4, 4 << 3 = 32
+        assert_eq!(calculate_expression("64 >> 2 >> 1", labels.clone()), Ok(8)); // 64 >> 2 = 16, 16 >> 1 = 8
+    }
+
+    #[test]
+    fn test_calculate_expression_with_labels() {
+        let mut labels = HashMap::new();
+        labels.insert("label1".to_string(), 10);
+        labels.insert("label2".to_string(), 20);
+        labels.insert("addr".to_string(), 0x1000);
+
+        assert_eq!(calculate_expression("label1 + label2", labels.clone()), Ok(30));
+        assert_eq!(calculate_expression("addr + 0x20", labels.clone()), Ok(0x1020));
+        assert_eq!(calculate_expression("(addr >> 4) + 1", labels.clone()), Ok(0x101));
+    }
+
+    #[test]
+    fn test_calculate_expression_different_bases() {
+        let labels = HashMap::new();
+        // 十六进制
+        assert_eq!(calculate_expression("0x10 + 0x20", labels.clone()), Ok(0x30));
+        assert_eq!(calculate_expression("0xFF >> 4", labels.clone()), Ok(0xF));
+
+        // 八进制（可选测试）
+        assert_eq!(calculate_expression("0o10 + 0o20", labels.clone()), Ok(0o30));
+
+        // 二进制
+        assert_eq!(calculate_expression("0b1100 >> 2", labels.clone()), Ok(0b11));
+
+        // 混合进制
+        assert_eq!(calculate_expression("0x10 + 16", labels.clone()), Ok(0x20));
+    }
+
+    #[test]
+    fn test_calculate_expression_edge_cases() {
+        let labels = HashMap::new();
+        // 除零错误
+        assert!(calculate_expression("10 / 0", labels.clone()).is_err());
+        assert!(calculate_expression("10 % 0", labels.clone()).is_err());
+
+        // 溢出检查
+        assert!(calculate_expression("0xFFFFFFFF + 1", labels.clone()).is_err()); // 超过u32范围
+
+        // 负数（可能不被支持）
+        assert!(calculate_expression("-1", labels.clone()).is_err());
+
+        // 无效语法
+        assert!(calculate_expression("1 + + 2", labels.clone()).is_err());
+        assert!(calculate_expression("1 * * 2", labels.clone()).is_err());
+        assert!(calculate_expression("(1 + 2", labels.clone()).is_err()); // 缺少右括号
+        assert!(calculate_expression("1 + 2)", labels.clone()).is_err()); // 缺少左括号
+
+        // 无效符号
+        assert!(calculate_expression("1 & 2", labels.clone()).is_err()); // & 不支持
+        assert!(calculate_expression("1 | 2", labels.clone()).is_err()); // | 不支持
+    }
+
+    #[test]
+    fn test_calculate_expression_advanced() {
+        let labels = HashMap::new();
+
+        // 复杂嵌套表达式
+        assert_eq!(calculate_expression("(1 + 2) * (3 + 4)", labels.clone()), Ok(21));
+        assert_eq!(calculate_expression("((1 << 2) + (3 >> 1)) * 2", labels.clone()), Ok(10)); // (4 + 1) * 2 = 10
+
+        // 多层括号
+        assert_eq!(calculate_expression("((((1 + 1))))", labels.clone()), Ok(2));
+
+        // 运算符优先级验证
+        assert_eq!(calculate_expression("1 + 2 << 3", labels.clone()), Ok(24)); // (1 + 2) << 3 = 3 << 3 = 24? 不，+优先级高于<<? 实际上<<优先级低于+，所以是(1+2)<<3=24
+        assert_eq!(calculate_expression("1 << 2 + 3", labels.clone()), Ok(32)); // 1 << (2 + 3) = 1 << 5 = 32
+
+        // 空格处理
+        assert_eq!(calculate_expression("1+2", labels.clone()), Ok(3));
+        assert_eq!(calculate_expression("1 + 2", labels.clone()), Ok(3));
+        assert_eq!(calculate_expression("  1   +   2  ", labels.clone()), Ok(3));
+        assert_eq!(calculate_expression("( 1 + 2 ) * 3", labels.clone()), Ok(9));
+
+        // 大数计算
+        assert_eq!(calculate_expression("0xFFFF * 0xFFFF", labels.clone()), Ok(0xFFFE0001)); // 需要检查是否在u32范围内
+        assert_eq!(calculate_expression("0xFFFFFFFF / 0xFFFF", labels.clone()), Ok(0x10001));
+
+        // 位移边界
+        assert_eq!(calculate_expression("1 << 31", labels.clone()), Ok(0x80000000));
+        assert_eq!(calculate_expression("0x80000000 >> 31", labels.clone()), Ok(1));
+
+        // 除法和取模
+        assert_eq!(calculate_expression("7 / 2", labels.clone()), Ok(3)); // 整数除法
+        assert_eq!(calculate_expression("7 % 2", labels.clone()), Ok(1));
+
+        // 表达式中的零
+        assert_eq!(calculate_expression("0 * 100", labels.clone()), Ok(0));
+        assert_eq!(calculate_expression("100 + 0", labels.clone()), Ok(100));
+        assert_eq!(calculate_expression("0 >> 5", labels.clone()), Ok(0));
+        assert_eq!(calculate_expression("0 << 5", labels.clone()), Ok(0));
+    }
+}
+
